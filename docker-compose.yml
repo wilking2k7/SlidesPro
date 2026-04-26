@@ -1,0 +1,105 @@
+# SlidesPro — entorno local con Docker
+#
+# Puertos elegidos para no chocar con tus otros stacks (gema en 5432/5050,
+# evangelist en 5433/5051).
+#
+# Uso:
+#   docker compose up -d                    # postgres + redis + pgadmin
+#   docker compose --profile full up -d     # añade la app (dev container con hot reload)
+#   docker compose down                     # detener
+#   docker compose down -v                  # detener y borrar volúmenes (reset DB)
+#
+# La app por defecto se ejecuta en host con `npm run dev` y se conecta a los
+# servicios de aquí. El profile "full" la corre dentro de Docker.
+
+name: slidespro
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: slidespro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: slidespro
+      POSTGRES_PASSWORD: slidespro
+      POSTGRES_DB: slidespro
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U slidespro -d slidespro"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: slidespro-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: slidespro-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@slidespro.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5052:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # App en Docker (opcional). Por defecto NO se levanta — usa npm run dev en host.
+  # Activar con:  docker compose --profile full up -d
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: slidespro-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://slidespro:slidespro@postgres:5432/slidespro
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    env_file:
+      - .env.local
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+      - ./public:/app/public
+      - ./next.config.ts:/app/next.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./package.json:/app/package.json
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:

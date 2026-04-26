@@ -1,0 +1,2642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlidesIA — YouTube a Presentación</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&family=Space+Grotesk:wght@400;600;700&family=Bitter:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<style>
+  /* ── BASE ── */
+  :root {
+    --bg:#F0F4FF; --surface:#FFF; --surface2:#E8EEFF; --border:#C8D4F8;
+    --text:#1A1714; --text-muted:#5A6A9A; --accent:#2D5BE3;
+    --accent-light:#EEF2FF; --danger:#E34A2D; --success:#2DB37A;
+    --radius:12px; --shadow:0 2px 12px rgba(45,91,227,.08); --shadow-lg:0 8px 40px rgba(45,91,227,.15);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* ── HEADER ── */
+  header{padding:16px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--text);text-decoration:none;}
+  .logo-icon{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+  .logo-icon svg{stroke:white;fill:none;}
+  .badge{font-size:.7rem;font-weight:600;letter-spacing:.06em;padding:3px 8px;border-radius:20px;background:var(--accent-light);color:var(--accent);text-transform:uppercase;}
+
+  /* ── LAYOUT: app has sidebar + main ── */
+  #app-layout{display:flex;height:calc(100vh - 57px);}
+
+  /* ── HISTORY SIDEBAR ── */
+  #history-sidebar{
+    width:240px;flex-shrink:0;background:var(--surface2);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .hist-header{padding:16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .hist-title{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
+  .hist-list{flex:1;overflow-y:auto;padding:10px;}
+  .hist-list::-webkit-scrollbar{width:3px;}
+  .hist-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .hist-empty{padding:20px 12px;text-align:center;font-size:.8rem;color:var(--text-muted);line-height:1.5;}
+  .hist-item{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s;
+    position:relative;
+  }
+  .hist-item:hover{border-color:var(--accent);box-shadow:var(--shadow);}
+  .hist-item-title{font-size:.82rem;font-weight:600;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:4px;line-height:1.3;}
+  .hist-item-meta{font-size:.7rem;color:var(--text-muted);}
+  .hist-item-actions{display:flex;gap:4px;margin-top:8px;}
+  .hist-btn{flex:1;padding:5px 4px;border-radius:6px;border:1px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;cursor:pointer;transition:all .12s;color:var(--text-muted);}
+  .hist-btn:hover{background:var(--accent);color:white;border-color:var(--accent);}
+  .hist-btn.del:hover{background:var(--danger);border-color:var(--danger);}
+  .hist-btn.del{color:var(--danger);border-color:#F5C4BC;}
+
+  /* ── MAIN AREA ── */
+  #main-area{flex:1;overflow-y:auto;padding:0;}
+
+  /* ── APP VIEW ── */
+  #app-view{max-width:680px;margin:48px auto;padding:0 24px;}
+  .headline{font-family:'DM Serif Display',serif;font-size:2.6rem;line-height:1.12;margin-bottom:10px;}
+  .headline em{font-style:italic;color:var(--accent);}
+  .subline{color:var(--text-muted);font-size:1rem;margin-bottom:40px;font-weight:300;}
+
+  /* API KEY */
+  .key-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s;margin-bottom:20px;}
+  .key-card:focus-within{border-color:var(--accent);}
+  .key-card.has-key{border-color:var(--success);}
+  .key-header{display:flex;align-items:center;justify-content:space-between;}
+  .key-label{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);}
+  .key-status{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .3s;}
+  .key-status.ok{background:var(--success);}
+  .key-model{font-size:.72rem;color:var(--text-muted);}
+  .key-card input{border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:transparent;width:100%;}
+
+  /* IMAGE TOGGLE */
+  .img-toggle{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;}
+  .img-toggle-info{display:flex;flex-direction:column;gap:2px;}
+  .img-toggle-title{font-size:.9rem;font-weight:600;}
+  .img-toggle-sub{font-size:.76rem;color:var(--text-muted);}
+  .switch{position:relative;display:inline-block;width:42px;height:24px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:24px;transition:.3s;}
+  .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+  input:checked+.slider{background:var(--accent);}
+  input:checked+.slider:before{transform:translateX(18px);}
+
+  /* TABS */
+  .tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--surface2);border-radius:10px;padding:4px;}
+  .tab-btn{flex:1;padding:10px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;cursor:pointer;background:transparent;color:var(--text-muted);transition:all .2s;}
+  .tab-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow);}
+  .input-panel{display:none;}
+  .input-panel.active{display:block;}
+  .input-group{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s;}
+  .input-group:focus-within{border-color:var(--accent);}
+  .input-group input,.input-group textarea{width:100%;padding:16px 20px;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.95rem;color:var(--text);background:transparent;resize:none;}
+  .input-group textarea{min-height:150px;}
+  .input-hint{font-size:.76rem;color:var(--text-muted);padding:0 4px;margin-top:6px;}
+
+  /* CONFIG */
+  .config-row{display:flex;gap:12px;margin:16px 0 8px;}
+  .config-item{flex:1;}
+  .config-item label{display:block;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px;}
+  .config-item select{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--surface);outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A7470' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+
+  /* GENERATE BTN */
+  .btn-generate{width:100%;padding:15px;background:var(--accent);color:white;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;}
+  .btn-generate:hover{background:#1E4BC7;transform:translateY(-1px);box-shadow:var(--shadow-lg);}
+  .btn-generate:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;transform:none;box-shadow:none;}
+  .error-box{background:#FFF0EE;border:1px solid #F5C4BC;border-radius:10px;padding:14px 18px;margin-top:14px;font-size:.87rem;color:var(--danger);display:none;}
+
+  /* ── LOADING ── */
+  #loading-view{display:none;max-width:560px;margin:60px auto;padding:0 24px;text-align:center;}
+  .loading-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 36px;}
+  .spinner{width:42px;height:42px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 18px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-steps{list-style:none;margin-top:24px;text-align:left;max-width:320px;margin-left:auto;margin-right:auto;}
+  .loading-steps li{padding:8px 0;font-size:.86rem;color:var(--text-muted);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .loading-steps li:last-child{border-bottom:none;}
+  .loading-steps li.done{color:var(--success);}
+  .loading-steps li.active{color:var(--text);font-weight:500;}
+  .step-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;}
+  .loading-steps li.done .step-dot{background:var(--success);}
+  .loading-steps li.active .step-dot{background:var(--accent);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .img-loading-bar{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:20px;}
+  .img-loading-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .5s ease;width:0%;}
+  .img-loading-label{font-size:.76rem;color:var(--text-muted);margin-top:7px;}
+
+  /* ── PRESENTATION VIEW ── */
+  #pres-view{display:none;height:100vh;flex-direction:column;}
+
+  .pres-header{background:var(--surface);border-bottom:1px solid var(--border);padding:11px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px;}
+  .pres-title-wrap{flex:1;overflow:hidden;}
+  .pres-title{font-family:'DM Serif Display',serif;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pres-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .btn-icon{width:34px;height:34px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text);}
+  .btn-icon:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-sm{padding:7px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;border:1.5px solid;display:flex;align-items:center;gap:6px;}
+  .btn-outline{background:var(--surface);color:var(--text);border-color:var(--border);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-primary{background:var(--accent);color:white;border-color:var(--accent);}
+  .btn-primary:hover{background:#1E4BC7;border-color:#1E4BC7;}
+  .back-btn{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);cursor:pointer;border:none;background:none;font-family:'DM Sans',sans-serif;padding:0;transition:color .15s;flex-shrink:0;}
+  .back-btn:hover{color:var(--text);}
+
+  .pres-body{flex:1;display:flex;overflow:hidden;}
+
+  /* Slides sidebar */
+  .slides-sidebar{width:155px;background:var(--surface2);border-right:1px solid var(--border);overflow-y:auto;padding:10px 7px;flex-shrink:0;}
+  .slide-thumb{border-radius:7px;border:2px solid transparent;margin-bottom:8px;cursor:pointer;background:white;transition:all .15s;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:8px;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;}
+  .slide-thumb:hover{border-color:var(--border);transform:scale(1.02);}
+  .slide-thumb.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+  .slide-thumb-num{position:absolute;top:3px;left:5px;font-size:.58rem;color:var(--text-muted);font-weight:700;z-index:2;}
+  .slide-thumb-text{font-size:.5rem;color:var(--text);text-align:center;line-height:1.3;font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;z-index:2;position:relative;}
+  .slide-thumb-bg{position:absolute;inset:0;z-index:0;}
+  .slide-thumb-bg img{width:100%;height:100%;object-fit:cover;opacity:.2;}
+
+  /* Canvas */
+  .slide-canvas{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#EDEAE5;padding:12px;gap:10px;overflow:autden;}
+  .slide-wrapper{transform-origin:top center;transition:transform .2s ease;width:100%;max-width:1707px;aspect-ratio:1707/952;border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden;background:white;}
+
+  /* Edit mode */
+  [contenteditable=true]{outline:none;cursor:text;}
+  [contenteditable=true]:focus{background:rgba(45,91,227,.04);border-radius:4px;}
+  .edit-indicator{position:fixed;top:70px;right:20px;background:var(--accent);color:white;font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:20px;display:none;z-index:200;align-items:center;gap:6px;}
+  .edit-indicator.show{display:flex;}
+
+  /* Visual nav */
+  .visual-nav{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:7px 16px;box-shadow:var(--shadow);}
+  .vn-btn{width:38px;height:38px;border-radius:50%;border:none;background:var(--surface2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text);}
+  .vn-btn:hover:not(:disabled){background:var(--accent);color:white;transform:scale(1.05);}
+  .vn-btn:disabled{opacity:.3;cursor:not-allowed;}
+  .vn-dots{display:flex;gap:5px;align-items:center;}
+  .vn-dot{height:5px;border-radius:5px;background:var(--border);cursor:pointer;transition:all .25s;width:5px;}
+  .vn-dot.active{width:20px;}
+  .vn-dot:hover:not(.active){background:var(--text-muted);}
+  .vn-counter{font-size:.78rem;color:var(--text-muted);font-weight:500;min-width:44px;text-align:center;}
+
+  /* ── SLIDE TYPES (base — overridden by theme vars injected per presentation) ── */
+  .slide{display:none;width:100%;height:100%;position:relative;overflow:hidden;font-family:var(--pres-body-font,'DM Sans',sans-serif);}
+  .slide.active{display:flex;}
+
+  /* Cover */
+  .slide-cover{flex-direction:row;}
+  .cover-left{flex:1.1;padding:48px 44px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;background:var(--pres-bg,#fff);}
+  .cover-right{flex:.9;position:relative;overflow:hidden;background:var(--pres-accent,#2D5BE3);}
+  .cover-right img,.closing-right img,.content-right img{width:100%;height:100%;object-fit:cover;}
+  .cover-right .img-placeholder,.closing-right .img-placeholder,.content-right .img-placeholder{width:100%;height:100%;background:var(--pres-accent,#2D5BE3);opacity:.15;}
+  .slide-cover .tag{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pres-accent,#2D5BE3);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  .slide-cover h1{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:clamp(1.4rem,3.2vw,2.3rem);line-height:1.1;color:var(--pres-text,#1A1714);margin-bottom:14px;}
+  .slide-cover .subtitle{font-size:.88rem;color:var(--pres-muted,#7A7470);font-weight:300;line-height:1.6;}
+  .accent-bar{position:absolute;right:0;top:0;bottom:0;width:4px;background:var(--pres-accent,#2D5BE3);}
+
+  /* Content */
+  .slide-content{flex-direction:row;}
+  .content-left{flex:1;padding:40px 38px;display:flex;flex-direction:column;background:var(--pres-bg,#fff);}
+  .content-right{width:250px;flex-shrink:0;position:relative;overflow:hidden;}
+  .slide-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--pres-accent,#2D5BE3);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+  .slide-content h2{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:clamp(1.1rem,2.3vw,1.6rem);color:var(--pres-text,#1A1714);margin-bottom:16px;line-height:1.2;}
+  .slide-content ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+  .slide-content ul li{display:flex;align-items:flex-start;gap:10px;font-size:.82rem;color:var(--pres-text,#1A1714);line-height:1.5;}
+  .bullet-icon{flex-shrink:0;margin-top:1px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+  .bullet-icon svg{width:14px;height:14px;}
+
+  /* Two-col */
+  .slide-two-col{flex-direction:column;padding:36px 44px;background:var(--pres-bg,#fff);}
+  .slide-two-col h2{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:clamp(1.1rem,2.2vw,1.6rem);color:var(--pres-text,#1A1714);margin-bottom:16px;}
+  .two-col-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;}.col-card{display:flex;flex-direction:column;}.col-card p{flex:1;}
+  .col-card{border-radius:10px;padding:16px;border-left:3px solid var(--pres-accent,#2D5BE3);background:var(--pres-card-bg,#F0EDE8);}
+  .col-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .col-card h3{font-size:.8rem;font-weight:700;color:var(--pres-text,#1A1714);}
+  .col-card p{font-size:.75rem;color:var(--pres-muted,#7A7470);line-height:1.6;}
+  .twocol-img{margin-top:12px;border-radius:8px;overflow:hidden;height:72px;}
+  .twocol-img img{width:100%;height:100%;object-fit:cover;}
+  .twocol-img .img-placeholder{width:100%;height:100%;background:var(--pres-card-bg,#F0EDE8);}
+
+  /* Quote */
+  .slide-quote{flex-direction:column;justify-content:center;align-items:center;text-align:center;position:relative;overflow:hidden;}
+  .quote-bg{position:absolute;inset:0;}
+  .quote-bg img{width:100%;height:100%;object-fit:cover;opacity:.2;filter:grayscale(30%);}
+  .quote-bg .img-placeholder{width:100%;height:100%;background:var(--pres-text,#1A1714);}
+  .quote-overlay{position:absolute;inset:0;background:var(--pres-text,#1A1714);opacity:.86;}
+  .quote-content{position:relative;z-index:1;padding:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:100%;}
+  .quote-mark{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:5rem;color:var(--pres-accent,#2D5BE3);line-height:.5;margin-bottom:18px;display:block;text-align:center;}
+  .slide-quote blockquote{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:clamp(1rem,2.2vw,1.45rem);font-style:italic;line-height:1.55;max-width:76%;color:white;text-align:center;margin:0 auto;}
+
+  /* Closing */
+  .slide-closing{flex-direction:row;}
+  .closing-left{flex:1;padding:48px 44px;display:flex;flex-direction:column;justify-content:center;background:var(--pres-accent,#2D5BE3);}
+  .closing-right{flex:.85;position:relative;overflow:hidden;}
+  .closing-right .img-placeholder{width:100%;height:100%;background:var(--pres-accent2,#1E4BC7);}
+  .slide-closing h2{font-family:var(--pres-heading-font,'DM Serif Display',serif);font-size:clamp(1.4rem,2.8vw,2.1rem);color:white;margin-bottom:12px;line-height:1.15;}
+  .slide-closing p{color:rgba(255,255,255,.72);font-size:.88rem;line-height:1.6;max-width:85%;}
+
+  /* Slide number */
+  .slide-num{position:absolute;bottom:14px;right:18px;font-size:.68rem;color:var(--pres-muted,#7A7470);font-weight:600;z-index:10;}
+  .slide-closing .slide-num,.slide-quote .slide-num{color:rgba(255,255,255,.3);}
+
+  /* Progress bar */
+  .progress-bar{position:absolute;bottom:0;left:0;height:2px;background:var(--pres-accent,#2D5BE3);transition:width .3s ease;z-index:10;}
+
+  /* Image regenerate button */
+  .img-wrap{position:relative;width:100%;height:100%;}
+  .img-regen-btn{
+    position:absolute;bottom:8px;right:8px;z-index:20;
+    background:rgba(0,0,0,.6);color:white;border:none;
+    border-radius:6px;padding:5px 9px;font-size:.68rem;font-weight:600;
+    cursor:pointer;display:flex;align-items:center;gap:5px;
+    opacity:0;transition:opacity .2s;backdrop-filter:blur(4px);
+    font-family:'DM Sans',sans-serif;
+  }
+  .img-wrap:hover .img-regen-btn{opacity:1;}
+  .img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+  .img-generating-mini{width:100%;height:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--pres-card-bg,#F0EDE8);}
+  .mini-spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+
+  /* KB hint */
+  .kb-hint{text-align:center;font-size:.73rem;color:var(--text-muted);padding:7px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;}
+  kbd{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:.7rem;}
+
+  /* PDF overlay */
+  #pdf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;}
+  #pdf-overlay.show{display:flex;}
+  .pdf-card{background:white;border-radius:16px;padding:40px;text-align:center;max-width:360px;}
+  .pdf-card h3{font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:8px;}
+  .pdf-card p{color:var(--text-muted);font-size:.9rem;margin-bottom:0;}
+  .pdf-spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;}
+
+  /* ── CUSTOM STYLES MODULE ── */
+  .style-creator-btn{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--accent);background:none;border:none;cursor:pointer;padding:4px 0;font-weight:600;margin-top:6px;}
+  .style-creator-btn:hover{opacity:.75;}
+  .style-creator-panel{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;display:none;}
+  .style-creator-panel.open{display:block;}
+  .style-creator-panel h3{font-size:.82rem;font-weight:700;margin-bottom:12px;color:var(--text);}
+  .style-name-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.88rem;color:var(--text);background:var(--surface);outline:none;margin-bottom:10px;}
+  .style-name-input:focus{border-color:var(--accent);}
+  .style-drop-zone{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);margin-bottom:10px;position:relative;}
+  .style-drop-zone:hover,.style-drop-zone.drag-over{border-color:var(--accent);background:var(--surface);}
+  .style-drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .style-drop-zone-icon{font-size:1.6rem;margin-bottom:6px;}
+  .style-drop-zone p{font-size:.8rem;color:var(--text-muted);}
+  .style-drop-zone strong{font-size:.85rem;color:var(--text);}
+  .style-imgs-preview{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .style-img-thumb{width:56px;height:40px;border-radius:6px;object-fit:cover;border:1.5px solid var(--border);}
+  .style-img-count{font-size:.75rem;color:var(--text-muted);margin-bottom:10px;}
+  .style-progress{display:none;margin-bottom:10px;}
+  .style-progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px;}
+  .style-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease;width:0%;}
+  .style-progress-label{font-size:.78rem;color:var(--text-muted);}
+  .style-success{display:none;align-items:center;gap:8px;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;font-size:.82rem;color:#065F46;font-weight:600;margin-bottom:10px;}
+  .saved-styles-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+  .saved-style-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.82rem;}
+  .saved-style-name{font-weight:600;color:var(--text);}
+  .saved-style-del{background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:.9rem;padding:2px 6px;border-radius:4px;}
+  .saved-style-del:hover{color:#DC2626;backg
+  .slide-inner-scale{display:block;pointer-events:auto;}round:#FEE2E2;}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#">
+    <div class="logo-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2.5" stroke="white" fill="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </div>
+    SlidesIA
+  </a>
+  <a href="https://www.youtube.com/@soypacoia" target="_blank" class="badge" style="text-decoration:none;">BY SOYPACOIA</a>
+</header>
+
+<div class="edit-indicator" id="edit-indicator">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+  Modo edición — haz clic en cualquier texto
+</div>
+
+<div id="app-layout">
+
+  <!-- ── HISTORY SIDEBAR ── -->
+  <div id="history-sidebar">
+    <div class="hist-header">
+      <div class="hist-title">Historial</div>
+    </div>
+    <div class="hist-list" id="hist-list">
+      <div class="hist-empty">Las presentaciones generadas aparecerán aquí</div>
+    </div>
+  </div>
+
+  <!-- Banner progreso imágenes -->
+  <div id="img-progress-app" style="display:none;padding:6px 20px;background:var(--bg,#F0F4FF);border-bottom:1px solid var(--border,#C8D4F8);gap:10px;align-items:center;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#2D5BE3)" stroke-width="2.5" style="flex-shrink:0;animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+    <div style="flex:1;height:3px;background:var(--border,#C8D4F8);border-radius:2px;overflow:hidden;">
+      <div id="img-fill-app" style="height:100%;background:var(--accent,#2D5BE3);border-radius:2px;transition:width .4s ease;width:0%"></div>
+    </div>
+    <span id="img-label-app" style="font-size:.72rem;color:var(--text-muted,#666);white-space:nowrap;">Generando imágenes…</span>
+  </div>
+
+  <!-- ── MAIN AREA ── -->
+  <div id="main-area">
+
+    <!-- APP VIEW -->
+    <div id="app-view">
+      <h1 class="headline">Convierte cualquier video<br>en una <em>presentación</em></h1>
+      <p class="subline">Pega el link de YouTube o el transcript — slides únicos generados con IA.</p>
+
+      <!-- API KEY -->
+      <div class="key-card" id="card-gemini">
+        <div class="key-header">
+          <span class="key-label">Google AI Studio API Key</span>
+          <span class="key-status" id="status-gemini"></span>
+        </div>
+        <input type="password" id="key-gemini" placeholder="AIza..." oninput="checkKey()" />
+        <span class="key-model">gemini-2.5-flash-preview · gemini-3.1-flash-image-preview</span>
+      </div>
+
+      <!-- IMAGE TOGGLE -->
+      <div class="img-toggle">
+        <div class="img-toggle-info">
+          <span class="img-toggle-title">🖼️ Generar imágenes con IA</span>
+          <span class="img-toggle-sub">gemini-3.1-flash-image-preview · Requiere billing en AI Studio</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-images" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- TABS -->
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('url')">🔗 Link de YouTube</button>
+        <button class="tab-btn" onclick="switchTab('text')">📄 Pegar Transcript</button>
+      </div>
+
+      <div class="input-panel active" id="panel-url">
+        <div class="input-group">
+          <input type="url" id="yt-url" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+        <p class="input-hint">Gemini lee el video directamente desde YouTube.</p>
+      </div>
+
+      <div class="input-panel" id="panel-text">
+        <div class="input-group">
+          <textarea id="transcript" placeholder="Pega aquí el transcript o resumen del video..."></textarea>
+        </div>
+        <p class="input-hint">Obtén el transcript en lecture.new o cópialo desde YouTube.</p>
+      </div>
+
+      <div class="config-row">
+        <div class="config-item">
+          <label>Slides</label>
+          <select id="slide-count">
+            <option value="6">6 slides</option>
+            <option value="8" selected>8 slides</option>
+            <option value="10">10 slides</option>
+            <option value="12">12 slides</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label>Idioma</label>
+          <select id="output-lang">
+            <option value="Español" selected>Español</option>
+            <option value="English">English</option>
+            <option value="Português">Português</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label>Profundidad</label>
+          <select id="depth">
+            <option value="resumen ejecutivo">Ejecutivo</option>
+            <option value="análisis detallado" selected>Detallado</option>
+            <option value="guía paso a paso">Paso a paso</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ESTILO -->
+      <div class="config-item" style="margin-bottom:20px;">
+        <label>Estilo visual</label>
+        <select id="style-preset">
+          <option value="auto">✦ Auto Inteligente — el modelo decide</option>
+          <option value="apple">⬛ Apple Luxe — negro, blanco, tipografía dominante</option>
+          <option value="editorial">📰 Editorial Warm — crema, serif, periodismo premium</option>
+          <option value="cleantech">🔵 Clean Tech — azul/gris, sans-serif, datos precisos</option>
+          <option value="bold">🟠 Bold Expressive — color saturado, impacto, energía</option>
+          <option value="dark">🌑 Dark Cinematic — oscuro dramático, acento neón</option>
+        </select>
+
+        <!-- Saved custom styles — se insertan dinámicamente con JS -->
+        <div id="custom-styles-options"></div>
+
+        <!-- Botón abrir panel crear estilo -->
+        <button class="style-creator-btn" onclick="toggleStyleCreator()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Crear nuevo estilo visual
+        </button>
+      </div>
+
+      <!-- PANEL CREAR ESTILO -->
+      <div class="style-creator-panel" id="style-creator-panel">
+        <h3>✦ Crear estilo visual personalizado</h3>
+
+        <input type="text" class="style-name-input" id="custom-style-name"
+          placeholder="Nombre del estilo (ej: Marca Corporativa, Estilo Minimalista...)" maxlength="40" />
+
+        <div class="style-drop-zone" id="style-drop-zone" onclick="document.getElementById('style-imgs-input').click()">
+          <input type="file" id="style-imgs-input" accept="image/jpeg,image/png,image/webp"
+            multiple onchange="onStyleImgsSelected(event)" style="display:none" />
+          <div class="style-drop-zone-icon">🖼️</div>
+          <strong>Sube imágenes de referencia</strong>
+          <p>Capturas de slides que te gustan · hasta 15 imágenes · JPG, PNG</p>
+        </div>
+
+        <div class="style-imgs-preview" id="style-imgs-preview"></div>
+        <div class="style-img-count" id="style-img-count"></div>
+
+        <!-- Barra de progreso del análisis -->
+        <div class="style-progress" id="style-progress">
+          <div class="style-progress-bar">
+            <div class="style-progress-fill" id="style-progress-fill"></div>
+          </div>
+          <div class="style-progress-label" id="style-progress-label">Iniciando análisis…</div>
+        </div>
+
+        <!-- Éxito -->
+        <div class="style-success" id="style-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="style-success-msg">Estilo guardado correctamente</span>
+        </div>
+
+        <button class="btn-sm btn-primary" id="style-analyze-btn"
+          onclick="analyzeAndSaveStyle()" style="width:100%;padding:11px;">
+          ✦ Analizar y guardar estilo
+        </button>
+
+        <!-- Estilos guardados -->
+        <div id="saved-styles-list" class="saved-styles-list" style="margin-top:14px;"></div>
+      </div>
+
+      <button class="btn-generate" id="gen-btn" onclick="generate()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Generar Presentación
+      </button>
+      <div class="error-box" id="error-box"></div>
+    </div>
+
+    <!-- LOADING VIEW -->
+    <div id="loading-view">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <p style="font-family:'DM Serif Display',serif;font-size:1.4rem;margin-bottom:6px">Generando tus slides…</p>
+        <p style="color:var(--text-muted);font-size:.86rem" id="loading-subtitle">Analizando contenido y diseñando estilo único</p>
+        <ul class="loading-steps">
+          <li id="step-1"><span class="step-dot"></span>Analizando tema y contexto</li>
+          <li id="step-2"><span class="step-dot"></span>Diseñando paleta y estilo único</li>
+          <li id="step-3"><span class="step-dot"></span>Generando contenido y estructura</li>
+          <li id="step-4"><span class="step-dot"></span>Renderizando slides</li>
+          <li id="step-5"><span class="step-dot"></span>Generando imágenes con IA</li>
+        </ul>
+        <div class="img-loading-bar" id="img-bar" style="display:none">
+          <div class="img-loading-fill" id="img-fill"></div>
+        </div>
+        <p class="img-loading-label" id="img-label"></p>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div><!-- /app-layout -->
+
+<!-- ── PRESENTATION VIEW (full screen overlay) ── -->
+<div id="pres-view">
+  <div class="pres-header">
+    <button class="back-btn" onclick="goBack()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Nueva
+    </button>
+    <div class="pres-title-wrap">
+      <div class="pres-title" id="pres-title">—</div>
+    </div>
+    <div class="pres-actions">
+      <button class="btn-icon" id="edit-toggle-btn" onclick="toggleEditMode()" title="Editar texto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
+      <button class="btn-icon" onclick="zoomSlide(-1)" title="Zoom out (-)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </button>
+      <button class="btn-icon" onclick="zoomSlide(1)" title="Zoom in (+)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+      </button>
+      <button class="btn-icon" onclick="toggleFullscreen()" title="Pantalla completa (F)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      </button>
+      <button class="btn-sm btn-primary" id="export-pptx-btn" onclick="exportPPTX()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar PPTX
+      </button>
+    </div>
+  </div>
+
+  <div class="pres-body">
+    <div class="slides-sidebar" id="slides-sidebar"></div>
+    <div class="slide-canvas">
+      <div class="slide-wrapper" id="slide-wrapper">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="visual-nav">
+        <button class="vn-btn" id="vn-prev" onclick="prevSlide()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="vn-dots" id="vn-dots"></div>
+        <span class="vn-counter" id="vn-counter">1 / 1</span>
+        <button class="vn-btn" id="vn-next" onclick="nextSlide()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="kb-hint">
+    <kbd>←</kbd> <kbd>→</kbd> navegar · <kbd>F</kbd> fullscreen · <kbd>E</kbd> editar texto
+  </div>
+</div>
+
+<!-- PDF OVERLAY -->
+<div id="pdf-overlay">
+  <div class="pdf-card">
+    <div class="pdf-spinner"></div>
+    <h3>Generando presentación…</h3>
+    <p>Construyendo el archivo PPTX editable.</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+let slides = [];
+let currentSlide = 0;
+let activeTab = 'url';
+let generatedImages = {};
+let currentTheme = {};
+let editMode = false;
+let currentPresId = null;
+
+// ══════════════════════════════════════════
+//  HISTORY (localStorage)
+// ══════════════════════════════════════════
+const HIST_KEY = 'slidesia_history';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch(e){ return []; }
+}
+
+function saveHistory() { localStorage.setItem(HIST_KEY, JSON.stringify(loadHistory())); }
+
+function addToHistory(id, title, slideCount, theme) {
+  const hist = loadHistory();
+  const existing = hist.findIndex(h => h.id === id);
+  const entry = { id, title, slideCount, date: new Date().toLocaleDateString('es-MX'), theme };
+  if (existing >= 0) hist[existing] = entry;
+  else hist.unshift(entry);
+  // Keep last 20
+  if (hist.length > 20) hist.pop();
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  renderHistory();
+}
+
+function deleteFromHistory(id) {
+  let hist = loadHistory().filter(h => h.id !== id);
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  localStorage.removeItem('slidesia_pres_' + id);
+  // Remove all image keys for this presentation
+  const keysToRemove = [];
+  for (let i=0; i<localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('slidesia_img_' + id + '_')) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+  renderHistory();
+}
+
+function renderHistory() {
+  const hist = loadHistory();
+  const el = document.getElementById('hist-list');
+  if (!hist.length) {
+    el.innerHTML = '<div class="hist-empty">Las presentaciones generadas aparecerán aquí</div>';
+    return;
+  }
+  el.innerHTML = hist.map(h => `
+    <div class="hist-item" onclick="loadPresFromHistory('${h.id}')">
+      <div class="hist-item-title">${h.title}</div>
+      <div class="hist-item-meta">${h.slideCount} slides · ${h.date}</div>
+      <div class="hist-item-actions" onclick="event.stopPropagation()">
+        <button class="hist-btn" onclick="loadAndDownload('${h.id}','pptx')" title="Descargar PPTX">PPTX</button>
+        <button class="hist-btn del" onclick="deleteFromHistory('${h.id}')" title="Eliminar">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function savePresData(id, data) {
+  try {
+    // Snapshot rendered HTML (strip base64 images — stored separately to avoid quota)
+    const wrapper = document.getElementById('slide-wrapper');
+    if (wrapper) {
+      const clone = wrapper.cloneNode(true);
+      clone.querySelectorAll('.img-regen-btn').forEach(b=>b.remove());
+      clone.querySelectorAll('.img-generating-mini').forEach(el=>{
+        const d=document.createElement('div');
+        d.style.cssText='width:100%;height:100%;background:#F0EDE8;';
+        el.replaceWith(d);
+      });
+      clone.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+      // Replace base64 img src with placeholder — images stored separately
+      clone.querySelectorAll('img[src^="data:"]').forEach((img, idx) => {
+        img.dataset.imgIdx = idx;
+        img.src = '';
+        img.style.display = 'none';
+      });
+      data.renderedHTML = clone.innerHTML;
+    }
+
+    // Store images separately (each key = slidesia_img_ID_INDEX)
+    Object.entries(data.images || {}).forEach(([idx, imgSrc]) => {
+      try {
+        localStorage.setItem('slidesia_img_' + id + '_' + idx, imgSrc);
+      } catch(e) { /* quota for this image */ }
+    });
+    
+    // Save main data without images (avoid quota overflow)
+    const dataToSave = { ...data, images: Object.keys(data.images||{}).map(Number) };
+    localStorage.setItem('slidesia_pres_' + id, JSON.stringify(dataToSave));
+  } catch(e) { console.warn('savePresData:', e.message); }
+}
+
+function loadPresData(id) {
+  try {
+    const raw = localStorage.getItem('slidesia_pres_' + id);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // Restore images from separate keys
+    const imgs = {};
+    (data.images || []).forEach(idx => {
+      const src = localStorage.getItem('slidesia_img_' + id + '_' + idx);
+      if (src) imgs[idx] = src;
+    });
+    data.images = imgs;
+    // Restore base64 images into renderedHTML
+    if (data.renderedHTML && Object.keys(imgs).length) {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = data.renderedHTML;
+      tmp.querySelectorAll('img[data-img-idx]').forEach(img => {
+        const idx = img.dataset.imgIdx;
+        if (imgs[idx]) {
+          img.src = imgs[idx];
+          img.style.display = '';
+          delete img.dataset.imgIdx;
+        }
+      });
+      data.renderedHTML = tmp.innerHTML;
+    }
+    return data;
+  } catch(e) { return null; }
+}
+
+function loadPresFromHistory(id) {
+  const data = loadPresData(id);
+  if (!data) { alert('No se encontraron los datos de esta presentación.'); return; }
+  slides = data.slides || [];
+  currentTheme = data.theme || {};
+  currentPresId = id;
+  generatedImages = data.images || {};
+
+  applyThemeVars(currentTheme);
+  document.getElementById('pres-title').textContent = data.title || 'Presentación';
+
+  const wrapper = document.getElementById('slide-wrapper');
+  wrapper.querySelectorAll('.slide').forEach(s=>s.remove());
+  const sidebar = document.getElementById('slides-sidebar');
+  sidebar.innerHTML = '';
+  const dotsEl = document.getElementById('vn-dots');
+  dotsEl.innerHTML = '';
+  currentSlide = 0;
+
+  if (data.renderedHTML) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = data.renderedHTML;
+    Array.from(tmp.querySelectorAll('.slide')).forEach((s,i) => {
+      s.classList.toggle('active', i===0);
+      wrapper.insertBefore(s, wrapper.querySelector('.progress-bar'));
+    });
+  } else {
+    slides.forEach((s,i) => {
+      const el = createSlide(s, i, slides.length);
+      wrapper.insertBefore(el, wrapper.querySelector('.progress-bar'));
+      if (generatedImages[i]) injectImage(i, generatedImages[i]);
+    });
+  }
+
+  const allSlides = wrapper.querySelectorAll('.slide');
+  allSlides.forEach((s,i) => {
+    s.querySelectorAll('.img-wrap').forEach(w => {
+      if (!w.querySelector('.img-regen-btn')) {
+        const btn = document.createElement('button');
+        btn.className = 'img-regen-btn';
+        const idx = i;
+        btn.onclick = (e) => { e.stopPropagation(); regenImage(idx); };
+        btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Regenerar';
+        w.appendChild(btn);
+      }
+    });
+    const imgSrc = generatedImages[i] || '';
+    const titleEl = s.querySelector('h1,h2,blockquote');
+    const titleTxt = (slides[i] && (slides[i].title || slides[i].text)) || titleEl?.textContent || '—';
+    const thumb = document.createElement('div');
+    thumb.className = 'slide-thumb'+(i===0?' active':'');
+    thumb.onclick = ()=>goToSlide(i);
+    thumb.innerHTML = `<div class="slide-thumb-bg"><img src="${imgSrc}" ${imgSrc?'':'style="display:none"'}></div><span class="slide-thumb-num">${i+1}</span><div class="slide-thumb-text">${titleTxt}</div>`;
+    sidebar.appendChild(thumb);
+    const dot = document.createElement('div');
+    dot.className = 'vn-dot'+(i===0?' active':'');
+    if(i===0) dot.style.background = currentTheme.accent||'#2D5BE3';
+    dot.onclick = ()=>goToSlide(i);
+    dotsEl.appendChild(dot);
+  });
+
+  showAppLayout(false);
+  updateNav();
+}
+
+// ══════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════
+function showAppLayout(show) {
+  document.getElementById('app-layout').style.display = show ? 'flex' : 'none';
+  document.getElementById('pres-view').style.display = show ? 'none' : 'flex';
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active',(i===0&&tab==='url')||(i===1&&tab==='text')));
+  document.getElementById('panel-url').classList.toggle('active', tab==='url');
+  document.getElementById('panel-text').classList.toggle('active', tab==='text');
+}
+
+function checkKey() {
+  const g = document.getElementById('key-gemini').value.trim();
+  document.getElementById('status-gemini').className = 'key-status' + (g.length > 10 ? ' ok' : '');
+  document.getElementById('card-gemini').className = 'key-card' + (g.length > 10 ? ' has-key' : '');
+  if (g.length > 10) localStorage.setItem('slidesia_apikey', g);
+  else localStorage.removeItem('slidesia_apikey');
+}
+
+function setStep(n) {
+  for(let i=1;i<=5;i++){
+    const el = document.getElementById('step-'+i);
+    if(el) el.className = i<n?'done':i===n?'active':'';
+  }
+}
+
+function showImgProgress(cur, total) {
+  const pct = `${(cur/total)*100}%`;
+  const label = cur < total ? `Imagen ${cur+1} de ${total}…` : '✓ Imágenes listas';
+
+  // Barra en loading-view (pasos)
+  const bar = document.getElementById('img-bar');
+  if(bar) { bar.style.display='block'; }
+  const fill = document.getElementById('img-fill');
+  if(fill) fill.style.width = pct;
+  const lbl = document.getElementById('img-label');
+  if(lbl) lbl.textContent = label;
+
+  // Banner en app-view (visible mientras el usuario navega)
+  const appBanner = document.getElementById('img-progress-app');
+  if(appBanner) {
+    appBanner.style.display = cur < total ? 'flex' : 'none';
+  }
+  const appFill = document.getElementById('img-fill-app');
+  if(appFill) appFill.style.width = pct;
+  const appLabel = document.getElementById('img-label-app');
+  if(appLabel) appLabel.textContent = label;
+
+  // Bloquear exportar hasta que estén todas
+  const exportBtn  = document.getElementById('export-pptx-btn');
+  const exportBtn2 = document.getElementById('export-pptx-btn');
+  [exportBtn, exportBtn2].forEach(b => {
+    if(!b) return;
+    if(cur < total) { b.disabled = true; }
+    else { b.disabled = false; }
+  });
+  if(exportBtn && cur < total) exportBtn.title = 'Espera a que terminen las imágenes';
+}
+
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent = '⚠️ ' + msg;
+  box.style.display = 'block';
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════
+//  THEME VARS → CSS
+// ══════════════════════════════════════════
+function applyThemeVars(theme) {
+  // ONLY set --pres-* vars on the slide wrapper — NEVER touch documentElement
+  // to avoid overriding the app's blue UI variables
+  const wrapper = document.getElementById('slide-wrapper');
+  if (!wrapper) return;
+  wrapper.style.setProperty('--pres-bg',           theme.bg          || '#ffffff');
+  wrapper.style.setProperty('--pres-text',          theme.text        || '#1A1714');
+  wrapper.style.setProperty('--pres-muted',         theme.muted       || '#7A7470');
+  wrapper.style.setProperty('--pres-accent',        theme.accent      || '#2D5BE3');
+  wrapper.style.setProperty('--pres-accent2',       theme.accent2     || '#1E4BC7');
+  wrapper.style.setProperty('--pres-card-bg',       theme.cardBg      || '#F0EDE8');
+  wrapper.style.setProperty('--pres-heading-font',  theme.headingFont ? `'${theme.headingFont}'` : "'DM Serif Display'");
+  wrapper.style.setProperty('--pres-body-font',     theme.bodyFont    ? `'${theme.bodyFont}'`    : "'DM Sans'");
+  // Nav dots and progress bar use a data attribute read by CSS — not a global var
+  wrapper.dataset.presAccent = theme.accent || '#2D5BE3';
+  // Update progress bar and dots color directly (scoped)
+  const pb = wrapper.querySelector('.progress-bar');
+  if (pb) pb.style.background = theme.accent || '#2D5BE3';
+}
+
+// ══════════════════════════════════════════
+//  STEP 1: GENERATE THEME (dynamic per topic)
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  CORE: Una sola llamada — lee contenido, diseño + slides simultáneamente
+// ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+//  CORE: 2 llamadas — estructura JSON limpia + HTML de todos los slides en 1 bloque
+// ══════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════
+//  GENERATE — 2 llamadas: estructura JSON + HTML de todos los slides
+// ══════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+//  ENGINE — 2 llamadas limpias
+//  1) JSON puro: tema + contenido de cada slide
+//  2) HTML de todos los slides en un bloque, separado por ===SLIDE===
+// ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+//  3-AGENT ENGINE
+//  Agente 1: Analista — lee el contenido, extrae estructura
+//  Agente 2: Diseñador senior — recibe análisis, crea HTML de slides
+//  Agente 3: Generador de imágenes — crea imagen por slide
+// ══════════════════════════════════════════════════════════════
+
+async function generatePresentation(geminiKey, sourceUrl, sourceText, slideCount, lang, depth, stylePreset='auto') {
+  const contentParts = sourceUrl
+    ? [{ fileData: { mimeType: 'video/*', fileUri: sourceUrl } }]
+    : [{ text: sourceText }];
+
+  // ══ AGENTE 1: ANALISTA NARRATIVO (gemini-2.5-pro) ═══════════
+  // Ventana de contexto masiva + razonamiento profundo
+  // Extrae: historia, conflicto, metáfora central, atmósfera cinemática
+  setStep(2);
+  const analysis = await runAnalystAgent(contentParts, slideCount, lang, depth, geminiKey);
+
+  // ══ AGENTE 2: DIRECTOR DE ARTE / CODER (gemini-2.5-pro) ═════
+  // El prompt más exigente: personalidad visual, HTML complejo en JSON
+  // Requiere Pro para seguir reglas complejas cruzadas sin romper sintaxis
+  setStep(3);
+  const design = await runDesignerAgent(analysis, lang, geminiKey, stylePreset);
+
+  // ══ AGENTE 3: QA SANITIZADOR (gemini-3-flash-preview) ═══════
+  // Tarea matemática/estructural: busca HTML roto, corrige comillas, valida JSON
+  // Flash es perfecto aquí — velocidad sin necesidad de creatividad
+  setStep(4);
+  const sanitized = await runQAAgent(design, geminiKey);
+
+  // ══ AGENTE 4: SPEAKER NOTES (gemini-3-flash-preview) ════════
+  // En paralelo: toma key_points + the_hook → guion hablado fluido
+  // Flash brilla en redacción directa sin crear ideas nuevas
+  const notesPromise = runSpeakerNotesAgent(analysis, sanitized.slides, lang, geminiKey);
+
+  // Construir slides finales con el HTML sanitizado
+  const slides = sanitized.slides.length > 0
+    ? sanitized.slides.map((s, i) => ({
+        ...s,
+        html: sanitized.htmlBlocks[i] || s.html || '',
+      }))
+    : [];
+
+  // Esperar speaker notes y adjuntarlas
+  const notes = await notesPromise;
+  slides.forEach((s, i) => { if (notes[i]) s.speakerNotes = notes[i]; });
+
+  return {
+    title: analysis.title || slides[0]?.title || 'Presentación',
+    theme: sanitized.theme,
+    slides,
+  };
+}
+
+// ──────────────────────────────────────────────────────────────
+// AGENTE 3: QA SANITIZADOR
+// Modelo: gemini-3-flash-preview
+// Tarea: validar y limpiar el HTML generado por el Diseñador
+// Solo busca y corrige errores estructurales — no crea nada nuevo
+// ──────────────────────────────────────────────────────────────
+async function runQAAgent(design, geminiKey) {
+  if (!design.slides || design.slides.length === 0) {
+    return { ...design, htmlBlocks: [] };
+  }
+
+  // TAREA 1: Sanitización HTML (client-side)
+  const htmlBlocks = design.slides.map(s => {
+    let h = (s.html || '').trim();
+    if (!h) return '';
+
+    // Convertir comillas simples de atributos a dobles
+    h = h.replace(/(<[^>]+?)'([^']*?)'(?=[^<]*?>)/g, match => match.replace(/'/g, '"'));
+    // Eliminar event handlers
+    h = h.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+    // Eliminar template literals
+    h = h.replace(/\$\{[^}]{0,100}\}/g, '');
+    // Reemplazar CSS variables con inherit
+    h = h.replace(/var\(--[^)]+\)/g, 'inherit');
+    // Asegurar slide-num si el modelo lo olvidó
+    if (!h.includes('slide-num')) {
+      const mu = (design.theme?.muted || '#71717A');
+      h += `<span class="slide-num" style="position:absolute;bottom:12px;right:16px;font-size:10px;color:${mu};">SLIDENUM / SLIDETOTAL</span>`;
+    }
+    return h;
+  });
+
+  // TAREA 2: Design Critic — detectar anti-patrones
+  const issues = [];
+  let consecutiveEmojiCards = 0;
+
+  htmlBlocks.forEach((h, i) => {
+    if (!h) return;
+    // Detectar: emoji como elemento grande (font-size > 2rem en elemento de solo emoji)
+    const bigEmoji = /font-size:\s*[3-9]\d*px|font-size:\s*[3-9]rem/.test(h) &&
+                     /[\u{1F300}-\u{1FFFF}]/u.test(h);
+    // Detectar: múltiples cards oscuras sobre fondo oscuro
+    const darkOnDark = (h.match(/#[0-9a-f]{6}/gi) || [])
+      .filter(c => { const v=parseInt(c.slice(1),16); return ((v>>16)&255)<50&&((v>>8)&255)<50&&(v&255)<50; }).length > 2;
+
+    if (bigEmoji) consecutiveEmojiCards++;
+    else consecutiveEmojiCards = 0;
+
+    if (consecutiveEmojiCards >= 2 || darkOnDark) {
+      issues.push({ slideIndex: i, reason: bigEmoji ? 'emoji-hero' : 'dark-on-dark' });
+    }
+  });
+
+  if (issues.length > 0) {
+    console.warn(`[QA] Design issues detected in ${issues.length} slides:`, issues.map(i => `slide ${i.slideIndex+1}: ${i.reason}`).join(', '));
+  }
+
+  return {
+    theme: design.theme,
+    slides: design.slides,
+    htmlBlocks,
+    qaIssues: issues,
+  };
+}
+
+
+// ──────────────────────────────────────────────────────────────
+// AGENTE 4: SPEAKER NOTES
+// Modelo: gemini-3-flash-preview
+// Tarea: convertir key_points + the_hook en guion hablado fluido
+// Corre en paralelo al QA — no bloquea el flujo principal
+// ──────────────────────────────────────────────────────────────
+async function runSpeakerNotesAgent(analysis, slides, lang, geminiKey) {
+  try {
+    const slideSummaries = slides.map((s, i) =>
+      `Slide ${i+1} (${s.type}): "${s.title || s.text || ''}"${s.bullets?.length ? ' — bullets: ' + s.bullets.map(b=>b.text||b).join(' | ') : ''}`
+    ).join('\n');
+
+
+    const prompt = `You are a professional speaker and presentation coach.
+Write concise, conversational speaker notes for each slide of this presentation.
+
+LANGUAGE: ${lang} — all notes in ${lang}.
+STYLE: Natural, intelligent, connecting the dots — like a TED talk script.
+LENGTH: 2-4 sentences per slide maximum.
+
+CONTEXT:
+Hook: ${analysis.the_hook || ''}
+Core thesis: ${analysis.core_thesis || ''}
+Call to action: ${analysis.call_to_action || ''}
+
+SLIDES:
+${slideSummaries}
+
+Return ONLY a JSON array with one string per slide (no markdown):
+["Note for slide 1", "Note for slide 2", ...]`;
+
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.5, maxOutputTokens: 2000, responseMimeType: 'application/json' }
+        })
+      }
+    );
+
+    if (!r.ok) return [];
+    const raw = (await r.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!raw.trim()) return [];
+
+    const cleaned = raw.replace(/^```json\s*/im,'').replace(/^```\s*/im,'').replace(/\s*```\s*$/im,'').trim();
+    const notes = JSON.parse(cleaned);
+    return Array.isArray(notes) ? notes : [];
+  } catch(e) {
+    console.warn('Speaker notes agent failed:', e.message);
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// AGENTE 1: ANALISTA
+// Tarea pura: entender el contenido y estructurarlo
+// NO genera HTML, NO genera diseño visual
+// ──────────────────────────────────────────// ──────────────────────────────────────────────────────────────
+// AGENTE 1: ANALISTA DE CONTENIDO
+// Tarea única: leer el video y extraer un brief narrativo completo.
+// NO decide tipos de slide, NO decide estructura.
+// Solo extrae: tema, tono, audiencia, puntos clave, datos, citas, conclusión.
+// ──────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// AGENTE 1: NARRATIVE STRATEGIST & CINEMATIC CONTENT ANALYST
+// Deconstruye el contenido en su esencia narrativa y potencial visual.
+// NO decide estructura de slides. NO sugiere layouts.
+// Extrae: historia, conflicto, metáfora, atmósfera cinemática.
+// ──────────────────────────────────────────────────────────────
+async function runAnalystAgent(contentParts, slideCount, lang, depth, geminiKey) {
+
+  const prompt = `You are the world's leading Narrative Strategist and Cinematic Content Analyst.
+Your ONLY job is to read, deeply understand, and deconstruct the provided content into its core story, emotional arc, and visual potential.
+
+Do NOT decide slide structure. Do NOT suggest layouts. Just extract the narrative essence.
+
+Execution Steps:
+1. Deconstruct the Narrative: identify the underlying story, the central conflict, and the resolution.
+2. Identify the Core Metaphor: find the strongest analogy that binds the content together.
+3. Extract the Data: use precise, impactful, and dramatic language. Avoid generic summaries.
+4. Determine the Cinematic Atmosphere: think like a film director defining visual mood, lighting, and framing.
+
+OUTPUT LANGUAGE: ${lang} — ALL text fields in ${lang} (except imgPrompts, which must always be in English).
+CANVAS: All slides are designed for 1707×952px (96dpi, exact canvas size). imgPrompts must describe images sized for 16:9 widescreen composition.
+
+Return ONLY valid JSON (no markdown, no backticks):
+
+{
+  "title": "specific catchy presentation title in ${lang}",
+  "the_hook": "opening statement, question, or surprising fact that immediately grabs attention — in ${lang}",
+  "core_thesis": "the single most important idea, 1-2 punchy sentences — in ${lang}",
+  "narrative_tension": "the central conflict driving the content, e.g. Old Way vs New Way — in ${lang}",
+  "core_metaphor": "a powerful analogy or metaphor that visually explains the main idea — in ${lang}",
+  "emotional_arc": "the emotional journey of the audience, e.g. from confused to empowered — in ${lang}",
+  "content_style": "one of: storytelling | data-driven | opinion | tutorial | debate | documentary",
+  "target_audience": "who is this for, be specific — in ${lang}",
+  "key_points": [
+    "most important point phrased as a dramatic revelation — in ${lang}",
+    "second key point with specific supporting details — in ${lang}",
+    "third key point with specific details — in ${lang}",
+    "fourth key point with facts, numbers, or impactful quotes — in ${lang}",
+    "fifth key point if the narrative warrants it — in ${lang}"
+  ],
+  "notable_quotes": [
+    "most memorable hard-hitting phrase, exact or sharply paraphrased — in ${lang}"
+  ],
+  "comparisons_or_contrasts": [
+    "A vs B comparison highlighting the dramatic difference — in ${lang}"
+  ],
+  "call_to_action": "the ultimate mindset shift or action the audience must take — in ${lang}",
+  "cinematic_atmosphere": "describe visual mood using cinematography terms, e.g. high-contrast chiaroscuro, soft golden hour, gritty handheld documentary, neon cyberpunk glow — in ${lang}",
+  "suggested_slides": ${slideCount},
+  "imgPrompts": [
+    "highly specific photorealistic image description in English. Describe: camera lens (35mm, wide angle, macro), lighting, subject, composition. Incorporate the core metaphor. NO text, NO logos. Be specific to THIS content."
+  ]
+}`;
+
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [...contentParts, { text: prompt }] }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 4000, responseMimeType: 'application/json' }
+      })
+    }
+  );
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || `Error ${r.status}`); }
+  const raw = (await r.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!raw.trim()) throw new Error('El modelo no devolvió respuesta. Verifica tu API key.');
+  const result = robustParseJSON(raw);
+  if (!result.key_points?.length) throw new Error('No se pudo extraer el contenido. Intenta de nuevo.');
+  return result;
+}
+
+// ──────────────────────────────────────────────────────────────
+// AGENTE 2: EXPERT VISUAL PRESENTATION STRATEGIST & CREATIVE DIRECTOR
+// Recibe el brief narrativo del Analista y tiene LIBERTAD TOTAL.
+// Traduce la tensión narrativa, metáfora y atmósfera en HTML visual impactante.
+// ──────────────────────────────────────────────────────────────
+async function runDesignerAgent(analysis, lang, geminiKey, stylePreset='auto') {
+
+  const fallbackTheme = {
+    bg:'#0D0D15', text:'#F0EEE8', muted:'#7A7890', accent:'#0891B2', accent2:'#065F7A',
+    cardBg:'#16161E', headingFont:'Space Grotesk', bodyFont:'DM Sans',
+    styleName:'dark cinematic', coverLayout:'split-right', accentDecor:'bar-left',
+    coverBgAccent:true, bulletIcon:'M9 18l6-6-6-6', sectionIcon:'M4 6h16M4 12h8',
+  };
+
+  // ── SISTEMA DE ESTILOS PREDEFINIDOS ────────────────────────────
+  // Cada estilo tiene paleta fija, tipografía fija y prompt específico.
+  // 'auto' = el modelo elige libremente según la atmósfera cinemática.
+  const styleConfigs = {
+
+    apple: {
+      theme: {
+        bg:'#000000', text:'#F5F5F7', muted:'#86868B', accent:'#2997FF', accent2:'#0071E3',
+        cardBg:'#1C1C1E', headingFont:'Space Grotesk', bodyFont:'DM Sans',
+        styleName:'Apple Luxe',
+      },
+      instructions: `DESIGN ARCHETYPE: Apple Keynote — world-class minimalism, premium and precise.
+
+FIXED PALETTE (use exactly these hex values):
+  Background: #000000
+  Text: #F5F5F7
+  Muted: #86868B
+  Accent (blue): #2997FF
+  Accent2 (dark blue): #0071E3
+  Card bg: #1C1C1E
+  Heading font: Space Grotesk
+  Body font: DM Sans
+
+APPLE DESIGN LAWS:
+1. One idea per slide — absolutely nothing extra
+2. Titles: 3rem–4.5rem, font-weight 700, left-aligned or centered (alternate per slide)
+3. Never use bullet lists — instead: ONE powerful sentence per slide, or a stat hero
+4. Images: always full-bleed right panel or full-bleed background with text overlay
+5. Accent #2997FF used SPARINGLY — only for ONE element per slide (a word, a line, a label)
+6. Every slide needs generous whitespace — minimum 25% empty space
+7. If showing comparisons: use clean two-row split (not cards)
+8. Closing slide: full black, centered white headline, blue accent line below
+
+SLIDE LAYOUTS TO ROTATE (mandatory variety):
+  [A1] Full black + giant white title centered (6vw–8vw) + single blue accent word
+  [A2] Left 60% white text (title+one sentence) + right 40% image slot full-height
+  [A3] STAT HERO: huge number in #2997FF, small label above, context below — centered
+  [A4] Full-bleed image slot as background + white text overlay bottom panel
+  [A5] Two columns: left dark panel #1C1C1E, right #000000 — content bridging both
+  [A6] Quote: italic 2rem white text centered, thin blue line above and below`,
+    },
+
+    editorial: {
+      theme: {
+        bg:'#FAF7F0', text:'#1C1814', muted:'#8A7F72', accent:'#C1121F', accent2:'#8B0000',
+        cardBg:'#F0EBE0', headingFont:'Playfair Display', bodyFont:'DM Sans',
+        styleName:'Editorial Warm',
+      },
+      instructions: `DESIGN ARCHETYPE: Editorial Magazine — The Economist meets NYT. Authoritative, warm, premium.
+
+FIXED PALETTE (use exactly these hex values):
+  Background: #FAF7F0
+  Text: #1C1814
+  Muted: #8A7F72
+  Accent (red): #C1121F
+  Accent2 (dark red): #8B0000
+  Card bg: #F0EBE0
+  Heading font: Playfair Display
+  Body font: DM Sans
+
+EDITORIAL DESIGN LAWS:
+1. Titles in Playfair Display — serif gives authority and warmth
+2. Use THICK red rule lines (#C1121F, 4px) as section dividers and decorative elements
+3. Byline-style labels: small caps, tracked, in muted color above every title
+4. Images: editorial photography style slot — positioned as contextual evidence, not decoration
+5. Typography hierarchy: 2.5rem title → 1rem body, clear distinction
+6. Background always warm cream — never stark white, never dark
+7. Quotes: large italic serif text with thick left red border
+8. Data: presented as clean typographic hierarchy, no charts needed
+
+SLIDE LAYOUTS TO ROTATE:
+  [E1] Cover: full-bleed warm bg, giant Playfair title, red rule underline, byline below
+  [E2] Left 55% text (label+title+2 bullet points), right 45% image slot, red vertical separator
+  [E3] PULL QUOTE: left red 6px border, italic Playfair 1.8rem, attribution below in muted
+  [E4] Two-column: equal width, red horizontal rule top, contrasting content each side
+  [E5] STAT: number in red 4rem, label in small caps, context paragraph below
+  [E6] Closing: warm bg, centered Playfair headline, red ornamental rule, call-to-action below`,
+    },
+
+    cleantech: {
+      theme: {
+        bg:'#F8FAFC', text:'#0F172A', muted:'#64748B', accent:'#2563EB', accent2:'#1D4ED8',
+        cardBg:'#F1F5F9', headingFont:'Space Grotesk', bodyFont:'DM Sans',
+        styleName:'Clean Tech',
+      },
+      instructions: `DESIGN ARCHETYPE: McKinsey / Consulting Deck — precise, data-driven, credible, clean.
+
+FIXED PALETTE (use exactly these hex values):
+  Background: #F8FAFC (very light blue-gray, never pure white)
+  Text: #0F172A (near-black, maximum readability)
+  Muted: #64748B
+  Accent (blue): #2563EB
+  Accent2 (dark blue): #1D4ED8
+  Card bg: #F1F5F9
+  Heading font: Space Grotesk
+  Body font: DM Sans
+
+CLEAN TECH DESIGN LAWS:
+1. Precision is everything — aligned grids, consistent spacing, mathematical whitespace
+2. Accent blue used for: labels, key numbers, borders, section markers — never backgrounds
+3. Titles: 3.5vw–5vw, left-aligned, Space Grotesk 700
+4. Horizontal rules (#E2E8F0, 1px) separate every section
+5. Data points should feel like a dashboard — clean, scannable, hierarchical
+6. Image slots: right panel with subtle #F1F5F9 border, or data visualization area
+7. Labels always in blue small-caps above content
+8. Cards: #F1F5F9 bg, 1px border #E2E8F0, no shadow
+
+SLIDE LAYOUTS TO ROTATE:
+  [C1] Cover: white bg, left-aligned giant title, blue accent bar left edge, muted subtitle
+  [C2] Left label+title+bullets, right image slot with blue border frame
+  [C3] STAT DASHBOARD: 2–3 numbers in blue, labels below, grid layout
+  [C4] Two columns in #F1F5F9 cards, blue top border each, equal content
+  [C5] Full-width document header (blue bar top), title below, body left-aligned
+  [C6] Closing: clean white, centered blue headline, muted call-to-action, horizontal rule`,
+    },
+
+    bold: {
+      theme: {
+        bg:'#FF6B35', text:'#FFFFFF', muted:'#FFD4C2', accent:'#1A1A2E', accent2:'#16213E',
+        cardBg:'#E85D04', headingFont:'Space Grotesk', bodyFont:'DM Sans',
+        styleName:'Bold Expressive',
+      },
+      instructions: `DESIGN ARCHETYPE: Bold Expressive — high energy, social-first, marketing impact.
+
+DESIGN SYSTEM (adapt bg per slide for variety, keep the energy):
+  Main bg options: #FF6B35 (orange), #1A1A2E (dark), #FFFFFF (white), #F72585 (magenta)
+  Text on orange: #FFFFFF or #1A1A2E
+  Text on dark: #FFFFFF or #FF6B35
+  Accent: alternate between dark and orange per slide
+  Heading font: Space Grotesk (bold 800–900)
+  Body font: DM Sans
+
+BOLD EXPRESSIVE DESIGN LAWS:
+1. ENERGY is the design principle — every slide should feel like a poster
+2. Alternate bg colors across slides: orange → dark → white → back to orange
+3. Titles: 5vw–9vw, font-weight 900, can bleed to slide edges
+4. Maximum contrast always — white on orange, orange on dark, dark on white
+5. Emojis ONLY as small accent (1rem), never as hero
+6. Image slots: full-bleed, circular crop (border-radius 50%) or diagonal clip
+7. Stats: HUGE numbers, full width, alternating colors
+8. Never center-align body text — left-align for authority, right-align for contrast
+
+SLIDE LAYOUTS TO ROTATE:
+  [B1] Cover: full orange bg, giant black/white title bleeding edge, small white subtitle
+  [B2] Left dark panel + right orange panel, white title spanning both at top
+  [B3] STAT HERO: full dark bg, orange number 6rem, white label, circular image slot
+  [B4] Full white bg, dark title + orange accent word, full-bleed image bottom half
+  [B5] Quote: full magenta/orange bg, white italic 2.5rem, no other elements
+  [B6] Closing: alternating split — left dark "TAKEAWAY" label + right orange CTA`,
+    },
+
+    dark: {
+      theme: {
+        bg:'#080B14', text:'#E8E8F0', muted:'#6B7280', accent:'#06B6D4', accent2:'#0891B2',
+        cardBg:'#111827', headingFont:'Space Grotesk', bodyFont:'DM Sans',
+        styleName:'Dark Cinematic',
+      },
+      instructions: `DESIGN ARCHETYPE: Dark Cinematic — film-noir meets tech, dramatic, premium.
+
+FIXED PALETTE (use exactly these hex values):
+  Background: #080B14 (deep space black — NOT pure #000000)
+  Text: #E8E8F0 (warm white)
+  Muted: #6B7280
+  Accent (cyan): #06B6D4
+  Accent2 (dark cyan): #0891B2
+  Card bg: #111827
+  Heading font: Space Grotesk
+  Body font: DM Sans
+
+DARK CINEMATIC DESIGN LAWS:
+1. Background is a character — use subtle cyan glow effects (radial gradient with 5% opacity)
+2. Titles: 5vw–7vw, white on black, maximum drama
+3. Accent cyan ONLY for: section labels, key words, borders, thin rules — never full panels
+4. Image slots: full-bleed with gradient overlay (bottom-to-top #080B14 to transparent)
+5. Horizontal cyan rules (1px, #06B6D4) as architectural elements between sections
+6. Cards: #111827 bg, 1px #1F2937 border, subtle cyan left accent bar
+7. Every slide should feel like a scene transition in a prestige documentary
+8. Stats: white number, cyan label, dramatic scale difference
+
+SLIDE LAYOUTS TO ROTATE:
+  [D1] Cover: full deep bg, giant white title, thin cyan bottom line, subtle radial glow
+  [D2] Left 58% white title+cyan label+bullets, right 42% full-bleed image with gradient fade
+  [D3] STAT: centered huge white number, cyan label above, muted context below
+  [D4] Full-bleed image with semi-opaque dark overlay, white text bottom-left
+  [D5] Quote: centered italic white text, oversized cyan quotation marks, dark bg
+  [D6] Closing: deep bg, cyan accent left border panel, white headline, muted CTA`,
+    },
+  };
+
+  // ── CONSTRUIR PROMPT BASADO EN ESTILO ──────────────────────────
+  const isCustom = stylePreset && stylePreset.startsWith('custom_');
+  const isAuto = !stylePreset || stylePreset === 'auto';
+  const cfg = isAuto || isCustom ? null : styleConfigs[stylePreset];
+
+  // Cargar descripción del estilo custom desde localStorage
+  let customStyleBrief = '';
+  if (isCustom) {
+    const customId = stylePreset.replace('custom_', '');
+    const allCustom = JSON.parse(localStorage.getItem('slidesia_custom_styles') || '[]');
+    const found = allCustom.find(s => s.id === customId);
+    customStyleBrief = found?.description || '';
+  }
+
+  // Theme que se enviará al render
+  const baseTheme = cfg ? {
+    ...fallbackTheme,
+    ...cfg.theme,
+    coverLayout:'split-right', accentDecor:'bar-left', coverBgAccent:true,
+    bulletIcon:'M9 18l6-6-6-6', sectionIcon:'M4 6h16M4 12h8',
+  } : fallbackTheme;
+  // Para estilos custom, el modelo elige el theme libremente
+
+  // Instrucciones de diseño
+  const designInstructions = isCustom && customStyleBrief
+    ? `CUSTOM VISUAL STYLE — Follow this design brief EXACTLY:
+
+${customStyleBrief}
+
+Apply this visual system faithfully to all slides. Extract the exact color palette, typography decisions, layout patterns, and decorative elements described above. Every slide must feel like it belongs to this design system.`
+    : cfg ? cfg.instructions : `DESIGN ARCHETYPE: AUTO INTELLIGENT
+Choose ONE design archetype based on the CINEMATIC ATMOSPHERE and CORE METAPHOR:
+- If dark/tech/dramatic → use palette: bg #080B14, accent #06B6D4 (cyan), Space Grotesk
+- If warm/editorial/journalistic → use: bg #FAF7F0, accent #C1121F (red), Playfair Display
+- If clean/analytical/business → use: bg #F8FAFC, accent #2563EB (blue), Space Grotesk
+- If bold/marketing/social → use: bg #FF6B35, accent #1A1A2E, Space Grotesk 900
+- If luxury/minimal → use: bg #FAF7EF, accent #1B4332 (forest green), Playfair Display
+
+Select and commit to ONE direction. Make the design reflect the soul of the content.`;
+
+  const prompt = `You are an Expert Visual Presentation Strategist and Creative Director with 20 years at Pentagram, Apple, and TED.
+
+CONTENT BRIEF FROM NARRATIVE ANALYST:
+TOPIC: ${analysis.core_thesis || analysis.title}
+NARRATIVE TENSION: ${analysis.narrative_tension || 'Problem vs. Solution'}
+CORE METAPHOR: ${analysis.core_metaphor || 'A journey of discovery'}
+CINEMATIC ATMOSPHERE: ${analysis.cinematic_atmosphere || 'Professional and clean'}
+THE HOOK: ${analysis.the_hook || ''}
+LANGUAGE: ${lang}
+
+KEY POINTS:
+${(analysis.key_points || []).map((p,i) => `${i+1}. ${p}`).join('\n')}
+
+NOTABLE QUOTES:
+${(analysis.notable_quotes || []).join('\n')}
+
+CALL TO ACTION: ${analysis.call_to_action || ''}
+
+═══════════════════════════════════════════
+${designInstructions}
+═══════════════════════════════════════════
+
+MANDATORY DESIGN BRIEF (NON-NEGOTIABLE RULES):
+1. Typography: 3 levels only — headline 4vw–7vw / label 1vw uppercase tracked letter-spacing:0.1em / body 1.3vw–1.8vw
+2. Whitespace: minimum 20% of each slide intentionally empty
+3. Layout variety: NO two consecutive slides with the same layout pattern
+4. Contrast: text must be clearly readable — minimum 4.5:1 ratio
+5. FORBIDDEN: emoji as hero element, dark-cards-on-dark-bg, generic gradients, walls of text
+6. Container: 1707×952px (96dpi). Use width:100%;height:100% on root div. Use vw/vh/% for all sizes.
+Image slot: position <div class='img-wrap' data-img-slot='true' style='overflow:hidden;position:absolute;[exact position]'></div>
+
+SLIDE NUMBER: <span class='slide-num' style='position:absolute;bottom:1.5%;right:2%;font-size:1vw;color:[muted];'>SLIDENUM / [total]</span>
+IMPORTANT: The canvas is 1707×952px. All positions and font sizes must fill this canvas. Never leave empty white areas — extend backgrounds and elements to fill the full width and height.
+
+JSON ESCAPING RULES (critical to prevent parse errors):
+- Use SINGLE QUOTES for ALL HTML attributes inside the json html field
+- Output the html field as one continuous line — no raw line breaks
+- Use exact hex values — NEVER CSS variables or var()
+- contenteditable='false' on ALL text elements
+- Use ONLY relative units: vw, vh, %, rem — NEVER fixed px for font sizes or layout dimensions
+- Font sizes: headline 4vw–7vw / subheader 1vw–1.5vw / body 1.2vw–1.8vw
+- Positions: use % or vw/vh (e.g. top:10%, left:5%, width:50%)  
+- Padding: use % or vw (e.g. padding:4% 5%)
+- Use width:100%;height:100% on the root div to fill the entire canvas
+- Backgrounds MUST cover 100% width and height — no partial fills
+- This guarantees text never overflows at any screen size
+- COMPACT HTML: avoid verbose nested divs — use the minimum elements needed
+- Each slide html must be under 800 characters — use inline styles efficiently
+
+RETURN raw JSON only (no markdown):
+
+{
+  "theme": {
+    "bg": "${cfg?.theme.bg || '#080B14'}",
+    "text": "${cfg?.theme.text || '#E8E8F0'}",
+    "muted": "${cfg?.theme.muted || '#6B7280'}",
+    "accent": "${cfg?.theme.accent || '#06B6D4'}",
+    "accent2": "${cfg?.theme.accent2 || '#0891B2'}",
+    "cardBg": "${cfg?.theme.cardBg || '#111827'}",
+    "headingFont": "${cfg?.theme.headingFont || 'Space Grotesk'}",
+    "bodyFont": "${cfg?.theme.bodyFont || 'DM Sans'}",
+    "styleName": "${cfg?.theme.styleName || 'auto'}",
+    "coverLayout": "split-right",
+    "accentDecor": "bar-left",
+    "coverBgAccent": true,
+    "bulletIcon": "M9 18l6-6-6-6",
+    "sectionIcon": "M4 6h16M4 12h8"
+  },
+  "slides": [
+    {
+      "type": "cover|content|two-col|quote|stat|closing",
+      "title": "in ${lang}",
+      "subtitle": "in ${lang} if cover",
+      "tag": "label in ${lang} if cover/content",
+      "label": "section in ${lang} if content",
+      "text": "body in ${lang} if quote/closing",
+      "bullets": [{"text": "max 8 words in ${lang}", "icon": "emoji"}],
+      "col1": {"title": "", "text": "", "icon": "emoji"},
+      "col2": {"title": "", "text": "", "icon": "emoji"},
+      "imgPrompt": "Nano Banana 3.1: [lens: 35mm/wide/macro] + [lighting: chiaroscuro/golden hour/neon/studio] + [subject specific to THIS slide] + [composition]. NO text NO logos.",
+      "html": "complete inner HTML as single continuous line, single quotes for attributes"
+    }
+  ]
+}
+
+USE THE HOOK: '${analysis.the_hook || ''}' as the opening text of Slide 1.
+ALL visible text in ${lang}. CANVAS SIZE: 1707×952px (16:9) — use vw/vh/% units so slides scale perfectly. Generate all ${analysis.suggested_slides || 6} slides now.`;
+
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.9, maxOutputTokens: 32768, responseMimeType: 'application/json' }
+      })
+    }
+  );
+
+  if (!r.ok) { console.warn('Designer failed:', r.status); return { theme: baseTheme, slides: [], htmlBlocks: [] }; }
+  const raw = (await r.json()).candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!raw.trim()) return { theme: baseTheme, slides: [], htmlBlocks: [] };
+
+  let parsed;
+  try { parsed = robustParseJSON(raw); }
+  catch(e) { console.warn('Designer parse failed:', e.message); return { theme: baseTheme, slides: [], htmlBlocks: [] }; }
+
+  // Si hay estilo predefinido, forzar el theme correcto (no confiar en el modelo)
+  const theme = cfg
+    ? { ...baseTheme }
+    : { ...fallbackTheme, ...(parsed.theme || {}) };
+
+  const designSlides = parsed.slides || [];
+
+  // Si el modelo generó pocos slides o algunos sin HTML,
+  // generar el HTML faltante con llamadas individuales por slide
+  const totalExpected = analysis.suggested_slides || 6;
+  const needsMoreSlides = designSlides.length < totalExpected;
+  
+  if (needsMoreSlides) {
+    console.warn(`[A2] Solo generó ${designSlides.length}/${totalExpected} slides — generando restantes`);
+    // Completar con slides básicos del análisis si faltan
+    const existing = designSlides.length;
+    for (let i = existing; i < totalExpected; i++) {
+      const kp = analysis.key_points?.[i] || '';
+      designSlides.push({
+        type: i === totalExpected-1 ? 'closing' : 'content',
+        title: i === totalExpected-1 ? (analysis.call_to_action || 'Conclusión') : kp.substring(0,60),
+        text: kp,
+        bullets: kp ? [{text: kp, icon: '•'}] : [],
+        imgPrompt: analysis.imgPrompts?.[i] || 'professional abstract background',
+        html: ''
+      });
+    }
+  }
+
+  // Generar HTML básico para slides sin html — desde los datos del tema
+  function generateFallbackHTML(s, th) {
+    const bg   = th.bg      || '#0D0D15';
+    const txt  = th.text    || '#F0EEE8';
+    const muted= th.muted   || '#7A7890';
+    const acc  = th.accent  || '#0891B2';
+    const hFont= th.headingFont || 'Space Grotesk';
+    const bFont= th.bodyFont    || 'DM Sans';
+    const title   = (s.title || '').replace(/'/g,"\'");
+    const subtitle= (s.subtitle || s.text || '').replace(/'/g,"\'");
+    const label   = (s.label || s.tag || '').replace(/'/g,"\'");
+    const bullets = (s.bullets||[]).map(b=>(typeof b==='string'?b:b.text||'')).filter(Boolean);
+    const bulletsHTML = bullets.slice(0,4).map(b=>`<div style='display:flex;align-items:flex-start;gap:1vw;margin-bottom:0.8vh;'><span style='color:${acc};font-size:1.4vw;margin-top:0.1em;'>—</span><span style='font-size:1.4vw;line-height:1.5;color:${txt};'>${b.replace(/'/g,"&apos;")}</span></div>`).join('');
+    return `<div style='position:absolute;inset:0;background:${bg};display:flex;flex-direction:column;justify-content:center;padding:6% 7%;font-family:${hFont},sans-serif;'>`+
+      (label ? `<div style='font-size:0.9vw;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${acc};margin-bottom:2vh;'>${label}</div>` : '')+
+      (title ? `<div style='font-size:5vw;font-weight:800;line-height:1.1;color:${txt};margin-bottom:3vh;'>${title}</div>` : '')+
+      (bulletsHTML ? `<div style='font-family:${bFont},sans-serif;'>${bulletsHTML}</div>` : '')+
+      (subtitle && !bullets.length ? `<div style='font-size:1.6vw;color:${muted};line-height:1.6;font-family:${bFont},sans-serif;'>${subtitle}</div>` : '')+
+    `</div>`;
+  }
+
+  const htmlBlocks = designSlides.map(s => {
+    const raw = s.html ? s.html
+      .replace(/\s+on\w+\s*=\s*'[^']*'/gi, '')
+      .replace(/\s+on\w+\s*=\s*"[^"]*"/gi, '')
+      .replace(/\$\{[^}]{0,100}\}/g, '') : '';
+    // Si no hay html o es muy corto, generar uno básico desde los datos
+    return (raw && raw.trim().length > 30) ? raw : generateFallbackHTML(s, theme);
+  });
+
+  return { theme, slides: designSlides, htmlBlocks };
+}
+
+
+
+// ──────────────────────────────────────────────────────────────
+// AGENTE 3: QA SANITIZADOR + DESIGN CRITIC
+// Tarea 1: limpiar HTML roto (client-side, sin API call)
+// Tarea 2: detectar anti-patrones de diseño y marcar slides problemáticos
+// Si detecta "emoji-card-dark" en 2+ slides consecutivos → marca para regenerar
+// ──────────────────────────────────────────────────────────────
+
+
+function robustParseJSON(raw) {
+  let s = raw.replace(/^```json\s*/im,'').replace(/^```\s*/im,'').replace(/\s*```\s*$/im,'').trim();
+  try { return JSON.parse(s); } catch(e) {}
+
+  const start = s.indexOf('{');
+  if (start === -1) throw new Error('No se encontró JSON en la respuesta del modelo.');
+
+  let depth = 0, inStr = false, esc = false, end = -1;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\' && inStr) { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth === 0) { end = i; break; } }
+  }
+  if (end === -1) throw new Error('JSON incompleto en la respuesta.');
+  let js2 = s.slice(start, end + 1);
+  try { return JSON.parse(js2); } catch(e) {}
+
+  const san = js2
+    .replace(/\/\/[^\n\r"]*/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/,(\s*[}\]])/g, '$1')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  try { return JSON.parse(san); } catch(e) {}
+
+  throw new Error('No se pudo parsear la respuesta. Intenta de nuevo.');
+}
+
+function buildMasterPrompt(n, l, d) { return ''; } // legacy — no usado
+
+
+
+
+
+
+
+
+
+// ══ generate() ══
+async function generate() {
+  const geminiKey = document.getElementById('key-gemini').value.trim();
+  const withImages = document.getElementById('toggle-images').checked;
+  const slideCount = +document.getElementById('slide-count').value;
+  const lang = document.getElementById('output-lang').value;
+  const depth = document.getElementById('depth').value;
+  const stylePreset = document.getElementById('style-preset')?.value || 'auto';
+  const url = document.getElementById('yt-url').value.trim();
+  const text = document.getElementById('transcript').value.trim();
+  const errBox = document.getElementById('error-box');
+  errBox.style.display = 'none';
+
+  if (!geminiKey) { showError('Por favor ingresa tu API Key de Google AI Studio.'); return; }
+  if (activeTab === 'url' && !url) { showError('Por favor pega un link de YouTube.'); return; }
+  if (activeTab === 'text' && !text) { showError('Por favor pega el transcript.'); return; }
+
+  document.getElementById('app-view').style.display = 'none';
+  document.getElementById('loading-view').style.display = 'block';
+  generatedImages = {};
+
+  try {
+    setStep(1); await delay(200);
+    setStep(2); await delay(200);
+    setStep(3);
+
+    const parsed = await generatePresentation(
+      geminiKey,
+      activeTab === 'url' ? url : null,
+      activeTab === 'text' ? text : null,
+      slideCount, lang, depth, stylePreset
+    );
+
+    slides = parsed.slides;
+    currentTheme = parsed.theme || {};
+
+    if (!currentTheme.accent) currentTheme.accent = '#2D5BE3';
+    if (!currentTheme.bg) currentTheme.bg = '#F7F5F2';
+    if (!currentTheme.headingFont) currentTheme.headingFont = 'DM Serif Display';
+    if (!currentTheme.bodyFont) currentTheme.bodyFont = 'DM Sans';
+    if (!currentTheme.coverLayout) currentTheme.coverLayout = 'split-right';
+    if (!currentTheme.accentDecor) currentTheme.accentDecor = 'bar-left';
+
+    setStep(4);
+    currentPresId = Date.now().toString();
+    applyThemeVars(currentTheme);
+    showAppLayout(false);
+    renderPresentation(parsed.title, slides, false);
+    await delay(100);
+
+    // Mostrar la app AHORA — usuario ve slides mientras llegan imágenes
+    document.getElementById('loading-view').style.display = 'none';
+
+    if (withImages) {
+      // Bloquear exportar mientras se generan imágenes
+      const xBtn  = document.getElementById('export-pptx-btn');
+      const xBtn2 = document.getElementById('export-pptx-btn');
+      if(xBtn){  xBtn.disabled=true;  xBtn.textContent='Generando imágenes…'; }
+      if(xBtn2){ xBtn2.disabled=true; }
+
+      await generateAllImages(slides, geminiKey);
+
+      if(xBtn){  xBtn.disabled=false; xBtn.textContent='Descargar HTML'; }
+      if(xBtn2){ xBtn2.disabled=false; }
+    }
+
+    addToHistory(currentPresId, parsed.title, slides.length, currentTheme);
+    savePresData(currentPresId, {
+      title: parsed.title, slides, theme: currentTheme, images: generatedImages
+    });
+
+  } catch(e) {
+    document.getElementById('loading-view').style.display = 'none';
+    document.getElementById('app-view').style.display = 'block';
+    showError(e.message);
+    console.error(e);
+  }
+}
+
+
+
+// ══════════════════════════════════════════
+//  IMAGE GENERATION — gemini-3.1-flash-image-preview
+// ══════════════════════════════════════════
+async function generateAllImages(slidesData, geminiKey) {
+  const total = slidesData.length;
+  showImgProgress(0, total);
+  for(let i=0; i<slidesData.length; i++){
+    const prompt = slidesData[i].imgPrompt || `Professional photorealistic image: ${slidesData[i].title||slidesData[i].text||'abstract professional'}`;
+    try {
+      const imgData = await generateImage(prompt, geminiKey);
+      if(imgData){ generatedImages[i]=imgData; injectImage(i, imgData); }
+    } catch(e){ console.warn(`img ${i}:`, e.message); }
+    showImgProgress(i+1, total);
+    if(i < slidesData.length-1) await delay(400);
+  }
+  // Update saved data with images
+  if(currentPresId) savePresData(currentPresId, {
+    title: document.getElementById('pres-title').textContent,
+    slides, theme: currentTheme, images: generatedImages
+  });
+}
+
+async function generateImage(prompt, geminiKey) {
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${geminiKey}`,
+    { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents:[{role:'user', parts:[{text:`Professional, high quality, photorealistic, no text, no watermarks. ${prompt}`}]}],
+        generationConfig:{responseModalities:['IMAGE']}
+      })
+    }
+  );
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message);
+  const imgPart = (data.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData?.mimeType?.startsWith('image/'));
+  if(!imgPart) return null;
+  return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+}
+
+async function regenImage(idx) {
+  const geminiKey = document.getElementById('key-gemini').value.trim();
+  if(!geminiKey){ alert('Ingresa tu API Key primero'); return; }
+  const prompt = slides[idx]?.imgPrompt || `Professional image for: ${slides[idx]?.title||'presentation'}`;
+  const wrapEl = document.querySelector(`#slide-wrapper .slide:nth-child(${idx+1}) .img-wrap`);
+  if(wrapEl) {
+    wrapEl.innerHTML = '<div class="img-generating-mini"><div class="mini-spin"></div></div>';
+  }
+  try {
+    const imgData = await generateImage(prompt, geminiKey);
+    if(imgData){ generatedImages[idx]=imgData; injectImage(idx, imgData); updateThumbImg(idx, imgData); }
+  } catch(e){ alert('Error generando imagen: '+e.message); }
+}
+
+function injectImage(idx, imgSrc) {
+  const allSlides = document.querySelectorAll('#slide-wrapper .slide');
+  const slideEl = allSlides[idx];
+  if(!slideEl) return;
+  // Buscar el slot de imagen: puede ser .img-wrap O data-img-slot
+  const wrap = slideEl.querySelector('.img-wrap, [data-img-slot="true"], [data-img-slot]');
+  if(wrap){
+    const style = wrap.getAttribute('style') || '';
+    wrap.innerHTML = `<img src="${imgSrc}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"><button class="img-regen-btn" onclick="regenImage(${idx})">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Regenerar
+    </button>`;
+    // Ensure the wrap itself doesn't clip the image
+    if(!wrap.style.overflow) wrap.style.overflow = 'hidden';
+  }
+  updateThumbImg(idx, imgSrc);
+}
+
+function updateThumbImg(idx, imgSrc) {
+  const thumb = document.querySelectorAll('.slide-thumb')[idx];
+  if(!thumb) return;
+  let bg = thumb.querySelector('.slide-thumb-bg img');
+  if(!bg){ bg = document.createElement('img'); thumb.querySelector('.slide-thumb-bg')?.appendChild(bg); }
+  if(bg) bg.src = imgSrc;
+}
+
+// ══════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════
+function renderPresentation(title, slidesData, fromCache) {
+  resetZoom();
+  document.getElementById('pres-title').textContent = title;
+  currentSlide = 0;
+
+  const wrapper = document.getElementById('slide-wrapper');
+  wrapper.querySelectorAll('.slide').forEach(s=>s.remove());
+  const sidebar = document.getElementById('slides-sidebar');
+  sidebar.innerHTML = '';
+  const dotsEl = document.getElementById('vn-dots');
+  dotsEl.innerHTML = '';
+
+  applyThemeVars(currentTheme);
+
+  slidesData.forEach((s,i) => {
+    const el = createSlide(s, i, slidesData.length);
+    wrapper.insertBefore(el, wrapper.querySelector('.progress-bar'));
+
+    // If restoring from cache, inject saved images
+    if(fromCache && generatedImages[i]) injectImage(i, generatedImages[i]);
+
+    // Thumbnail
+    const thumb = document.createElement('div');
+    thumb.className = 'slide-thumb'+(i===0?' active':'');
+    thumb.onclick = ()=>goToSlide(i);
+    thumb.innerHTML = `<div class="slide-thumb-bg"><img src="" style="display:none" id="timg-${i}"></div>
+      <span class="slide-thumb-num">${i+1}</span>
+      <div class="slide-thumb-text">${s.title||s.text||'—'}</div>`;
+    sidebar.appendChild(thumb);
+
+    // Dot
+    const dot = document.createElement('div');
+    dot.className = 'vn-dot'+(i===0?' active':'');
+    dot.style.setProperty('background', i===0 ? (currentTheme.accent||'#2D5BE3') : '');
+    dot.onclick=()=>goToSlide(i);
+    dotsEl.appendChild(dot);
+  });
+
+  updateNav();
+  showAppLayout(false);
+}
+
+function iconSVG(theme, type='bullet') {
+  const d = type==='bullet' ? (theme.bulletIcon||'M9 18l6-6-6-6') : (theme.sectionIcon||'M4 6h16M4 12h8');
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${theme.accent||'#2D5BE3'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+}
+
+function imgSlot(idx, hasCache) {
+  const withImgs = document.getElementById('toggle-images')?.checked;
+  const acc  = currentTheme.accent  || '#2D5BE3';
+  const acc2 = currentTheme.accent2 || '#1E4BC7';
+  const bg   = currentTheme.bg      || '#F0EDE8';
+
+  const regenBtn = `<button class="img-regen-btn" onclick="regenImage(${idx})">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    ${hasCache && generatedImages[idx] ? 'Regenerar' : 'Generar'}</button>`;
+
+  if(hasCache && generatedImages[idx]) {
+    return `<div class="img-wrap" data-img-slot="true" style="overflow:hidden;width:100%;height:100%;">
+      <img src="${generatedImages[idx]}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">
+      ${regenBtn}</div>`;
+  }
+  if(withImgs) {
+    return `<div class="img-wrap" data-img-slot="true" style="overflow:hidden;width:100%;height:100%;">
+      <div class="img-generating-mini"><div class="mini-spin"></div></div>${regenBtn}</div>`;
+  }
+  // Sin imágenes: panel decorativo SVG
+  const patterns = [
+    `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${acc}"/><circle cx="30%" cy="40%" r="60%" fill="${acc2}" opacity=".35"/><circle cx="80%" cy="70%" r="40%" fill="${bg}" opacity=".12"/></svg>`,
+    `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${acc2}"/><rect x="10%" y="10%" width="80%" height="80%" fill="${acc}" opacity=".5"/></svg>`,
+    `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="${acc}"/><circle cx="50%" cy="50%" r="30%" fill="${acc2}" opacity=".6"/></svg>`,
+  ];
+  return `<div class="img-wrap" data-img-slot="true" style="overflow:hidden;width:100%;height:100%;">
+    ${patterns[idx % patterns.length]}${regenBtn}</div>`;
+}
+
+function createSlide(s, idx, total) {
+  const el = document.createElement('div');
+  el.className = 'slide' + (idx===0?' active':'');
+  el.setAttribute('data-slide-type', s.type||'content');
+
+  const acc    = currentTheme.accent  || '#E85D04';
+  const acc2   = currentTheme.accent2 || '#B34500';
+  const bg     = currentTheme.bg      || '#111111';
+  const txt    = currentTheme.text    || '#ffffff';
+  const muted  = currentTheme.muted   || '#999999';
+  const cardBg = currentTheme.cardBg  || '#1e1e1e';
+  const hasCached = !!generatedImages[idx];
+
+  // ── Modo A: el modelo generó HTML libre — inyectarlo directo ──
+  if (s.html && s.html.trim().length > 30) {
+    let h = s.html
+      .replace(/__SLIDENUM__/g, String(idx+1))
+      .replace(/SLIDENUM/g, String(idx+1))
+      .replace(/SLIDETOTAL/g, String(total))
+      // Eliminar cualquier ${...} que haya sobrevivido
+      .replace(/\$\{[^}]{0,80}\}/g, '')
+      // Eliminar event handlers inline
+      .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+
+    // Asegurar slide-num si el modelo lo olvidó
+    if (!h.includes('slide-num')) {
+      h += `<span class="slide-num" style="position:absolute;bottom:12px;right:16px;font-size:.65rem;color:${muted};">${idx+1} / ${total}</span>`;
+    }
+    // Wrap en contenedor que llena el slide completo
+    const wrappedH = `<div style='position:absolute;inset:0;width:100%;height:100%;overflow:hidden;'>${h}</div>`;
+    el.innerHTML = wrappedH;
+
+    // Marcar elementos de texto como editables (inicia desactivado)
+    el.querySelectorAll('h1,h2,h3,h4,h5,p,span,li,blockquote,div[class]')
+      .forEach(node => {
+        if (node.childElementCount === 0 || node.innerText?.trim()) {
+          node.setAttribute('contenteditable', 'false');
+        }
+      });
+
+    // Scale handled by scaleSlideContent()
+
+    // Inyectar imagen si ya existe en cache
+    if (hasCached && generatedImages[idx]) {
+      const slot = el.querySelector('.img-wrap,[data-img-slot="true"],[data-img-slot]');
+      if (slot) {
+        slot.style.overflow = 'hidden';
+        slot.innerHTML = `<img src="${generatedImages[idx]}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">
+          <button class="img-regen-btn" onclick="regenImage(${idx})">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Regenerar</button>`;
+      }
+    } else {
+      // Manejar slots de imagen vacíos
+      el.querySelectorAll('.img-wrap,[data-img-slot="true"],[data-img-slot]').forEach((slot,wi) => {
+        const withImgs = document.getElementById('toggle-images')?.checked;
+        if (withImgs) {
+          slot.style.overflow = 'hidden';
+          slot.innerHTML = `<div class="img-generating-mini"><div class="mini-spin"></div></div>
+            <button class="img-regen-btn" onclick="regenImage(${idx})">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Regenerar</button>`;
+        } else {
+          // Panel decorativo SVG
+          // SVGs generativos profesionales — varían por slide y tema
+          const bg0    = currentTheme.bg      || '#0D0D15';
+          const isDark = isLightColor(bg0) ? false : true;
+          const svgBg  = isDark ? bg0 : '#F0EDE4';
+
+          // 8 patrones visuales de calidad — rotan por slide index
+          const svgPatterns = [
+            // 1. Espiral de puntos — profundidad y movimiento
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/><defs><radialGradient id="rg${wi}" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${acc}" stop-opacity="0.15"/><stop offset="100%" stop-color="${svgBg}" stop-opacity="0"/></radialGradient></defs><rect width="400" height="300" fill="url(#rg${wi})"/>${Array.from({length:40},(_,k)=>{const a=k*0.4,r=12+k*5.5,x=200+r*Math.cos(a),y=150+r*Math.sin(a)*0.6,s=Math.max(0.5,2.5-k*0.04);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${s}" fill="${acc}" opacity="${(0.8-k*0.015).toFixed(2)}"/>`;}).join('')}</svg>`,
+
+            // 2. Grid de líneas con perspectiva — arquitectura y estructura
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/><defs><linearGradient id="lg${wi}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${acc}" stop-opacity="0.4"/><stop offset="100%" stop-color="${acc}" stop-opacity="0"/></linearGradient></defs>${Array.from({length:10},(_,k)=>`<line x1="${k*44}" y1="0" x2="${200+k*22}" y2="300" stroke="${acc}" stroke-width="0.5" opacity="${0.3+k*0.03}"/>`).join('')}${Array.from({length:8},(_,k)=>`<line x1="0" y1="${k*40}" x2="400" y2="${150+k*12}" stroke="${acc2||acc}" stroke-width="0.5" opacity="0.2"/>`).join('')}<rect width="400" height="300" fill="url(#lg${wi})"/></svg>`,
+
+            // 3. Círculos concéntricos con desplazamiento — foco y expansión
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/>${Array.from({length:8},(_,k)=>`<circle cx="280" cy="150" r="${30+k*32}" fill="none" stroke="${acc}" stroke-width="${1.5-k*0.12}" opacity="${0.5-k*0.05}"/>`).join('')}<circle cx="280" cy="150" r="18" fill="${acc}" opacity="0.8"/><circle cx="280" cy="150" r="8" fill="${svgBg}"/></svg>`,
+
+            // 4. Formas orgánicas superpuestas — profundidad y capas
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/><defs><linearGradient id="og${wi}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${acc}" stop-opacity="0.6"/><stop offset="100%" stop-color="${acc2||acc}" stop-opacity="0.2"/></linearGradient></defs><ellipse cx="300" cy="80" rx="180" ry="140" fill="url(#og${wi})" opacity="0.5"/><ellipse cx="120" cy="220" rx="150" ry="110" fill="${acc}" opacity="0.15"/><ellipse cx="350" cy="240" rx="100" ry="80" fill="${acc2||acc}" opacity="0.25"/></svg>`,
+
+            // 5. Triángulos geométricos — energía y dirección
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/><polygon points="400,0 400,300 200,300" fill="${acc}" opacity="0.12"/><polygon points="400,0 250,0 400,180" fill="${acc}" opacity="0.2"/><polygon points="300,0 400,0 400,120" fill="${acc2||acc}" opacity="0.35"/><line x1="200" y1="300" x2="400" y2="0" stroke="${acc}" stroke-width="1" opacity="0.3"/></svg>`,
+
+            // 6. Cuadrícula de puntos con gradiente — datos y precisión
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/>${Array.from({length:12},(_,row)=>Array.from({length:16},(_,col)=>{const x=16+col*24,y=16+row*20,dist=Math.sqrt((x-200)**2+(y-150)**2),op=Math.max(0.05,0.6-dist/280);return `<rect x="${x-2}" y="${y-2}" width="4" height="4" rx="1" fill="${acc}" opacity="${op.toFixed(2)}"/>`;}).join('')).join('')}</svg>`,
+
+            // 7. Ondas fluyendo — movimiento y continuidad
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/>${Array.from({length:6},(_,k)=>`<path d="M0,${100+k*25} Q100,${70+k*25} 200,${100+k*25} T400,${100+k*25}" fill="none" stroke="${k%2===0?acc:(acc2||acc)}" stroke-width="${2-k*0.2}" opacity="${0.5-k*0.06}"/>`).join('')}</svg>`,
+
+            // 8. Hexágonos — tecnología y estructura modular
+            `<svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="400" height="300" fill="${svgBg}"/>${Array.from({length:15},(_,k)=>{const cols=5,row=Math.floor(k/cols),col=k%cols,x=60+col*72+(row%2)*36,y=50+row*62,pts=Array.from({length:6},(_,j)=>`${(x+30*Math.cos(j*Math.PI/3)).toFixed(1)},${(y+30*Math.sin(j*Math.PI/3)).toFixed(1)}`).join(' ');return `<polygon points="${pts}" fill="none" stroke="${acc}" stroke-width="0.8" opacity="${0.1+Math.random()*0.3}"/>`;}).join('')}</svg>`,
+          ];
+
+          const svgIndex = (idx + wi) % svgPatterns.length;
+          slot.style.overflow = 'hidden';
+          slot.innerHTML = svgPatterns[svgIndex] + `<button class="img-regen-btn" onclick="regenImage(${idx})">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Generar</button>`;
+        }
+      });
+    }
+    return el;
+  }
+
+  // Fallback si s.html está vacío — evita error insertBefore
+  el.innerHTML = `<div style='width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:${currentTheme.bg||'#111'};color:${currentTheme.muted||'#999'};font-family:DM Sans,sans-serif;font-size:1.2rem;opacity:.5;'>Generando...</div>`;
+  return el;
+}
+
+// ══════════════════════════════════════════
+//  EDIT MODE
+// ══════════════════════════════════════════
+function toggleEditMode() {
+  editMode = !editMode;
+  const editables = document.querySelectorAll('#slide-wrapper [contenteditable]');
+  editables.forEach(el => el.setAttribute('contenteditable', editMode ? 'true' : 'false'));
+  document.getElementById('edit-indicator').classList.toggle('show', editMode);
+  document.getElementById('edit-toggle-btn').style.background = editMode ? 'var(--accent-light)' : '';
+  document.getElementById('edit-toggle-btn').style.borderColor = editMode ? 'var(--accent)' : '';
+  document.getElementById('edit-toggle-btn').style.color = editMode ? 'var(--accent)' : '';
+}
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function goToSlide(n) {
+  const allSlides = document.querySelectorAll('#slide-wrapper .slide');
+  const allThumbs = document.querySelectorAll('.slide-thumb');
+  const allDots = document.querySelectorAll('.vn-dot');
+  if(n<0||n>=allSlides.length) return;
+  allSlides[currentSlide].classList.remove('active');
+  allThumbs[currentSlide]?.classList.remove('active');
+  allDots[currentSlide]?.classList.remove('active');
+  allDots[currentSlide]?.style.removeProperty('background');
+  currentSlide=n;
+  allSlides[currentSlide].classList.add('active');
+  allThumbs[currentSlide]?.classList.add('active');
+  allDots[currentSlide]?.classList.add('active');
+  allDots[currentSlide]?.style.setProperty('background', currentTheme.accent||'#2D5BE3');
+  allThumbs[currentSlide]?.scrollIntoView({block:'nearest',behavior:'smooth'});
+  updateNav();
+}
+function nextSlide(){ goToSlide(currentSlide+1); }
+function prevSlide(){ goToSlide(currentSlide-1); }
+function updateNav() {
+  const total = document.querySelectorAll('#slide-wrapper .slide').length;
+  document.getElementById('vn-counter').textContent = `${currentSlide+1} / ${total}`;
+  document.getElementById('vn-prev').disabled = currentSlide===0;
+  document.getElementById('vn-next').disabled = currentSlide===total-1;
+  document.getElementById('progress-bar').style.width = `${((currentSlide+1)/total)*100}%`;
+  document.getElementById('progress-bar').style.background = (currentTheme && currentTheme.accent) ? currentTheme.accent : '#2D5BE3';
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if(document.getElementById('pres-view').style.display!=='flex') return;
+  if(editMode && e.target.getAttribute('contenteditable')==='true') return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') nextSlide();
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') prevSlide();
+  if(e.key==='f'||e.key==='F') toggleFullscreen();
+  if(e.key==='e'||e.key==='E') toggleEditMode();
+});
+
+function toggleFullscreen() {
+  const el = document.getElementById('pres-view');
+  if(!document.fullscreenElement) el.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+function goBack() {
+  document.getElementById('pres-view').style.display = 'none';
+  document.getElementById('app-layout').style.display = 'flex';
+  document.getElementById('app-view').style.display = 'block';
+  document.getElementById('loading-view').style.display = 'none';
+}
+
+function exportHTML() {
+  const btn = document.getElementById('export-pptx-btn');
+  if(btn){btn.disabled=true;btn.textContent='Generando…';}
+
+  try {
+    const title = document.getElementById('pres-title')?.textContent || 'Presentación';
+    const exportContent = buildExportHTML(title, currentTheme);
+    const blob = new Blob([exportContent], {type:'text/html;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = title.replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Error exportando HTML: ' + e.message);
+    console.error(e);
+  }
+
+  if(btn){btn.disabled=false;btn.textContent='Descargar HTML';}
+}
+
+
+// ══════════════════════════════════════════
+//  BUILD EXPORT HTML (shared by download + PDF)
+// ══════════════════════════════════════════
+function buildExportHTML(title, theme) {
+  const acc   = theme.accent   || '#2D5BE3';
+  const acc2  = theme.accent2  || '#1E4BC7';
+  const bg    = theme.bg       || '#ffffff';
+  const txt   = theme.text     || '#1A1714';
+  const muted = theme.muted    || '#7A7470';
+  const cardBg= theme.cardBg   || '#F0EDE8';
+  const hFont = theme.headingFont || 'DM Serif Display';
+  const bFont = theme.bodyFont    || 'DM Sans';
+
+  // Serialize slides from live DOM — captures edited text + real images
+  const allSlides = document.querySelectorAll('#slide-wrapper .slide');
+  let slidesHTML = '';
+  allSlides.forEach((s, i) => {
+    const clone = s.cloneNode(true);
+    clone.querySelectorAll('.img-regen-btn').forEach(b => b.remove());
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    clone.querySelectorAll('.img-generating-mini').forEach(el => {
+      const d = document.createElement('div');
+      d.style.cssText = `width:100%;height:100%;background:${cardBg};`;
+      el.replaceWith(d);
+    });
+    // Remove wrapper-level CSS vars — inject them as concrete inline styles
+    clone.removeAttribute('style');
+    clone.classList.toggle('active', i === 0);
+    // Inline theme colors on key structural elements so export is self-contained
+    const applyInline = (sel, props) => {
+      clone.querySelectorAll(sel).forEach(el => {
+        Object.entries(props).forEach(([k,v]) => el.style.setProperty(k,v));
+      });
+    };
+    applyInline('.cover-left,.content-left,.slide-two-col', {'background': bg, 'color': txt});
+    applyInline('.closing-left', {'background': acc});
+    applyInline('.cover-right', {'background': acc});
+    applyInline('.tag,.slide-label', {'color': acc});
+    applyInline('.slide-cover h1,.slide-two-col h2,.slide-content h2,.slide-closing h2', {'font-family': `'${hFont}',serif`, 'color': txt});
+    applyInline('.slide-closing h2', {'color': 'white'});
+    applyInline('.accent-bar,.progress-bar', {'background': acc});
+    applyInline('.col-card', {'background': cardBg, 'border-left-color': acc});
+    applyInline('.quote-bg .img-placeholder,.quote-overlay', {'background': txt});
+    applyInline('.quote-mark', {'color': acc});
+    applyInline('.closing-right', {'background': acc2});
+    clone.style.fontFamily = `'${bFont}',sans-serif`;
+    slidesHTML += clone.outerHTML + '\n';
+  });
+
+  return `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,700;1,700&family=Space+Grotesk:wght@400;600;700&family=Bitter:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+<style>
+  /* ── ZOOM ── */
+  .sw{transform-origin:top center;transition:transform .2s ease;}
+  .slide-canvas{overflow:auto !important;}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'${bFont}',sans-serif;background:#EDEAE5;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.nav-bar{background:#fff;border-bottom:1px solid #E2DDD7;padding:11px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16px;}
+.nav-bar h1{font-family:'${hFont}',serif;font-size:.95rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vn{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #E2DDD7;border-radius:50px;padding:5px 12px;}
+.vn-btn{width:32px;height:32px;border-radius:50%;border:none;background:#F0EDE8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all .15s;}
+.vn-btn:hover:not(:disabled){background:${acc};color:white;}.vn-btn:disabled{opacity:.3;cursor:not-allowed;}
+.vn-dots{display:flex;gap:5px;align-items:center;}
+.vn-dot{height:5px;border-radius:5px;background:#E2DDD7;cursor:pointer;transition:all .25s;width:5px;}
+.vn-dot.active{background:${acc};width:20px;}
+.vn-ctr{font-size:.78rem;color:#7A7470;min-width:44px;text-align:center;}
+.canvas{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:14px;overflow:hidden;}
+.sw{width:100%;max-width:1707px;aspect-ratio:1707/952;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.12);overflow:hidden;position:relative;background:${bg};}
+.pb{position:absolute;bottom:0;left:0;height:2px;background:${acc};transition:width .3s;z-index:10;}
+.slide{display:none;width:100%;height:100%;position:relative;font-family:'${bFont}',sans-serif;}
+.slide.active{display:flex;}
+.slide-cover{flex-direction:row;}
+.cover-left{flex:1.1;padding:48px 44px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;}
+.cover-right{flex:.9;position:relative;overflow:hidden;}
+.cover-right img,.closing-right img,.content-right img,.img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.tag{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+.slide-cover h1{font-family:'${hFont}',serif;font-size:clamp(1.4rem,3.2vw,2.3rem);line-height:1.1;margin-bottom:14px;}
+.slide-cover .subtitle{font-size:.88rem;font-weight:300;line-height:1.6;color:${muted};}
+.accent-bar{position:absolute;right:0;top:0;bottom:0;width:4px;}
+.slide-content{flex-direction:row;}
+.content-left{flex:1;padding:40px 38px;display:flex;flex-direction:column;}
+.content-right{width:250px;flex-shrink:0;overflow:hidden;}
+.slide-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.slide-content h2{font-family:'${hFont}',serif;font-size:clamp(1.1rem,2.3vw,1.6rem);margin-bottom:16px;line-height:1.2;}
+.slide-content ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.slide-content ul li{display:flex;align-items:flex-start;gap:10px;font-size:.82rem;line-height:1.5;color:${txt};}
+.bullet-icon{flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;}
+.bullet-icon svg{width:14px;height:14px;}
+.slide-two-col{flex-direction:column;padding:36px 44px;}
+.slide-two-col h2{font-family:'${hFont}',serif;font-size:clamp(1.1rem,2.2vw,1.6rem);margin-bottom:16px;}
+.two-col-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;}
+.col-card{border-radius:10px;padding:18px;border-left:3px solid ${acc};display:flex;flex-direction:column;}
+.col-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.col-card h3{font-size:.8rem;font-weight:700;color:${txt};}
+.col-card p{font-size:.78rem;color:${muted};line-height:1.65;flex:1;}
+.twocol-img{margin-top:12px;border-radius:8px;overflow:hidden;height:72px;}
+.twocol-img img{width:100%;height:100%;object-fit:cover;}
+.slide-quote{flex-direction:column;justify-content:center;align-items:center;text-align:center;position:relative;overflow:hidden;}
+.quote-bg{position:absolute;inset:0;}
+.quote-bg img{width:100%;height:100%;object-fit:cover;opacity:.2;filter:grayscale(30%);}
+.quote-overlay{position:absolute;inset:0;opacity:.86;}
+.quote-content{position:relative;z-index:1;padding:40px;}
+.quote-mark{font-family:'${hFont}',serif;font-size:5rem;line-height:.5;margin-bottom:18px;display:block;}
+.slide-quote blockquote{font-family:'${hFont}',serif;font-size:clamp(1rem,2.2vw,1.45rem);font-style:italic;line-height:1.55;max-width:76%;color:white;}
+.slide-closing{flex-direction:row;}
+.closing-left{flex:1;padding:48px 44px;display:flex;flex-direction:column;justify-content:center;}
+.closing-right{flex:.85;overflow:hidden;}
+.slide-closing h2{font-family:'${hFont}',serif;font-size:clamp(1.4rem,2.8vw,2.1rem);color:white;margin-bottom:12px;line-height:1.15;}
+.slide-closing p{color:rgba(255,255,255,.72);font-size:.88rem;line-height:1.6;max-width:85%;}
+.slide-num{position:absolute;bottom:14px;right:18px;font-size:.68rem;color:${muted};font-weight:600;z-index:10;}
+.slide-closing .slide-num,.slide-quote .slide-num{color:rgba(255,255,255,.3);}
+.img-wrap{width:100%;height:100%;position:relative;}
+.kb{text-align:center;font-size:.72rem;color:#7A7470;padding:7px;background:white;border-top:1px solid #E2DDD7;flex-shrink:0;}
+kbd{background:#F0EDE8;border:1px solid #E2DDD7;border-radius:3px;padding:1px 5px;font-family:monospace;}
+</style></head><body>
+<div class="nav-bar">
+  <h1>${title}</h1>
+  <div class="vn">
+    <button class="vn-btn" id="prev" onclick="go(-1)">&#8592;</button>
+    <div class="vn-dots" id="dots"></div>
+    <span class="vn-ctr" id="ctr">1/1</span>
+    <button class="vn-btn" id="nxt" onclick="go(1)">&#8594;</button>
+  </div>
+</div>
+<div class="canvas">
+  <div class="sw">
+    <div class="pb" id="pb"></div>
+    ${slidesHTML}
+  </div>
+</div>
+<div class="kb">Navega con <kbd>&larr;</kbd> <kbd>&rarr;</kbd></div>
+\u003cscript>\nlet c=0;\nconst all=document.querySelectorAll('.slide');
+const dotsEl=document.getElementById('dots');
+all.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='vn-dot'+(i===0?' active':'');
+  d.onclick=()=>goto(i);
+  dotsEl.appendChild(d);
+});
+function goto(n){
+  all[c].classList.remove('active');
+  document.querySelectorAll('.vn-dot')[c].classList.remove('active');
+  c=Math.max(0,Math.min(all.length-1,n));
+  all[c].classList.add('active');
+  document.querySelectorAll('.vn-dot')[c].classList.add('active');
+  document.getElementById('ctr').textContent=(c+1)+'/'+all.length;
+  document.getElementById('prev').disabled=c===0;
+  document.getElementById('nxt').disabled=c===all.length-1;
+  document.getElementById('pb').style.width=((c+1)/all.length*100)+'%';
+}
+function go(d){goto(c+d);}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')go(1);if(e.key==='ArrowLeft'||e.key==='ArrowUp')go(-1);});
+goto(0);
+<\/script></body></html>`;
+}
+
+// ══════════════════════════════════════════
+//  DOWNLOAD HTML
+// ══════════════════════════════════════════
+function downloadHTML() {
+  // Legacy — kept for loadAndDownload compatibility
+  const title = document.getElementById('pres-title').textContent;
+  const exportHTML = buildExportHTML(title, currentTheme);
+  const blob = new Blob([exportHTML], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (title||'presentacion').replace(/[^a-z0-9]/gi,'_').toLowerCase() + '.html';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 1000);
+}
+
+async function loadAndDownload(id, format) {
+  loadPresFromHistory(id);
+  await delay(500);
+  if (format === 'pptx') exportPPTX();
+  else if (format === 'html') downloadHTML();
+}
+
+// ══════════════════════════════════════════
+//  EXPORT PPTX — PptxGenJS (editable en Google Slides y PowerPoint)
+// ═════════════════════════════════════════
+async function exportPPTX() {
+  const btn = document.getElementById('export-pptx-btn');
+  if(btn){btn.disabled=true;btn.textContent='Generando…';}
+  document.getElementById('pdf-overlay').classList.add('show');
+  await delay(120);
+
+  const titleText = document.getElementById('pres-title')?.textContent || 'Presentación';
+  const allSlideEls = document.querySelectorAll('#slide-wrapper .slide');
+
+  if(!allSlideEls.length){
+    alert('No hay slides para exportar.');
+    document.getElementById('pdf-overlay').classList.remove('show');
+    if(btn){btn.disabled=false;btn.textContent='Descargar PPTX';}
+    return;
+  }
+
+  try {
+    // Cargar html2canvas si no está
+    if(!window.html2canvas){
+      await new Promise((res,rej)=>{
+        const sc=document.createElement('script');
+        sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        sc.onload=res; sc.onerror=()=>rej(new Error('No se pudo cargar html2canvas'));
+        document.head.appendChild(sc);
+      });
+    }
+
+    const pptx = new PptxGenJS();
+    // 1707×952px a 96dpi = 17.78125 × 9.91667 pulgadas
+    pptx.defineLayout({ name:'SLIDES1707', width:17.78125, height:9.91667 });
+    pptx.layout = 'SLIDES1707';
+    pptx.title  = titleText;
+
+    const th  = currentTheme || {};
+    const savedCurrent = currentSlide;
+
+    // Contenedor offscreen exacto 1707×952
+    const offscreen = document.createElement('div');
+    offscreen.style.cssText='position:fixed;left:-9999px;top:0;width:1707px;height:952px;overflow:hidden;z-index:-1;pointer-events:none;';
+    document.body.appendChild(offscreen);
+
+    for(let i=0; i<allSlideEls.length; i++){
+      const slideEl = allSlideEls[i];
+      const pSlide  = pptx.addSlide();
+
+      // Activar slide
+      allSlideEls.forEach((el,j)=>el.classList.toggle('active',j===i));
+      await delay(80);
+
+      // Clonar slide a 1707×952 — ocultar solo botones UI
+      const clone = slideEl.cloneNode(true);
+      clone.style.cssText='display:flex;width:1707px;height:952px;position:relative;overflow:hidden;';
+      clone.querySelectorAll('.img-regen-btn,.slide-num,button').forEach(el=>el.remove());
+
+      // Aplicar scale 1:1 al inner (ya está diseñado para 1707px)
+      const inner = clone.querySelector('.slide-inner-scale');
+      if(inner){
+        inner.style.transform='scale(1)';
+        inner.style.width='1707px';
+        inner.style.height='952px';
+      }
+
+      offscreen.innerHTML='';
+      offscreen.appendChild(clone);
+      await delay(60);
+
+      // Capturar exactamente 1707×952
+      const canvas = await html2canvas(offscreen,{
+        scale:1, useCORS:true, allowTaint:true, logging:false,
+        width:1707, height:952,
+        windowWidth:1707, windowHeight:952,
+        backgroundColor: th.bg||'#080B14',
+      });
+
+      // Slide = imagen fija, sin texto encima
+      // Igual que NotebookLM — pixel perfect, no editable
+      pSlide.background = { data: canvas.toDataURL('image/jpeg', 0.96) };
+    }
+
+    document.body.removeChild(offscreen);
+    allSlideEls.forEach((el,j)=>el.classList.toggle('active',j===savedCurrent));
+    updateNav();
+
+    await pptx.writeFile({ fileName: titleText.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.pptx' });
+
+  } catch(e){
+    console.error('PPTX error:',e);
+    try{
+      document.querySelector('.pptx-offscreen')?.remove();
+      document.querySelectorAll('#slide-wrapper .slide')
+        .forEach((el,j)=>el.classList.toggle('active',j===currentSlide));
+      updateNav();
+    }catch(_){}
+    alert('Error generando PPTX: '+e.message);
+  }
+
+  document.getElementById('pdf-overlay').classList.remove('show');
+  if(btn){btn.disabled=false;btn.textContent='Descargar PPTX';}
+}
+
+function isLightColor(hex){
+  const h=(hex||'').replace('#','');
+  if(h.length<6) return true;
+  const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  return (0.299*r+0.587*g+0.114*b)>128;
+}
+
+
+
+
+
+
+
+
+
+async function exportPDF() {
+  // Alias mantenido por compatibilidad
+  await exportPPTX();
+}
+
+// ══════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════
+renderHistory();
+// Restore saved API key
+(function(){
+  const savedKey = localStorage.getItem('slidesia_apikey');
+  if (savedKey) {
+    const inp = document.getElementById('key-gemini');
+    if (inp) { inp.value = savedKey; checkKey(); }
+  }
+})();
+
+// ══════════════════════════════════════════════════════════════
+// MÓDULO: CUSTOM STYLE CREATOR
+// ══════════════════════════════════════════════════════════════
+
+const CUSTOM_STYLES_KEY = 'slidesia_custom_styles';
+let styleImgFiles = [];
+
+// Cargar estilos guardados al iniciar
+function loadCustomStyles() {
+  const raw = localStorage.getItem(CUSTOM_STYLES_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveCustomStyles(styles) {
+  localStorage.setItem(CUSTOM_STYLES_KEY, JSON.stringify(styles));
+}
+
+// Poblar el selector de estilos con los custom guardados
+function refreshStyleSelector() {
+  const styles = loadCustomStyles();
+  const container = document.getElementById('custom-styles-options');
+  const select = document.getElementById('style-preset');
+
+  // Quitar opciones custom anteriores
+  Array.from(select.options).forEach(opt => {
+    if (opt.value.startsWith('custom_')) opt.remove();
+  });
+
+  // Agregar las guardadas
+  styles.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = 'custom_' + s.id;
+    opt.textContent = '✦ ' + s.name;
+    select.appendChild(opt);
+  });
+
+  // Actualizar lista en el panel
+  renderSavedStylesList(styles);
+}
+
+function renderSavedStylesList(styles) {
+  const list = document.getElementById('saved-styles-list');
+  if (!list) return;
+  if (!styles.length) { list.innerHTML = ''; return; }
+  list.innerHTML = '<div style="font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Estilos guardados</div>' +
+    styles.map(s => `
+      <div class="saved-style-item">
+        <span class="saved-style-name">✦ ${s.name}</span>
+        <button class="saved-style-del" onclick="deleteCustomStyle('${s.id}')" title="Eliminar">✕</button>
+      </div>`
+    ).join('');
+}
+
+function deleteCustomStyle(id) {
+  const styles = loadCustomStyles().filter(s => s.id !== id);
+  saveCustomStyles(styles);
+  refreshStyleSelector();
+}
+
+// Toggle panel
+function toggleStyleCreator() {
+  const panel = document.getElementById('style-creator-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) refreshStyleSelector();
+}
+
+// Selección de imágenes
+function onStyleImgsSelected(e) {
+  const files = Array.from(e.target.files).slice(0, 15);
+  styleImgFiles = files;
+  renderStylePreviews(files);
+}
+
+function renderStylePreviews(files) {
+  const preview = document.getElementById('style-imgs-preview');
+  const count = document.getElementById('style-img-count');
+  preview.innerHTML = files.map(f => {
+    const url = URL.createObjectURL(f);
+    return `<img class="style-img-thumb" src="${url}" alt="">`;
+  }).join('');
+  count.textContent = files.length ? `${files.length} imagen${files.length > 1 ? 'es' : ''} seleccionada${files.length > 1 ? 's' : ''}` : '';
+}
+
+// Drag & drop
+document.addEventListener('DOMContentLoaded', () => {
+  refreshStyleSelector();
+  const zone = document.getElementById('style-drop-zone');
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files)
+      .filter(f => f.type.startsWith('image/'))
+      .slice(0, 15);
+    styleImgFiles = files;
+    renderStylePreviews(files);
+  });
+});
+
+// ── AGENTE EXTRACTOR DE ESTILO ────────────────────────────────
+// Recibe imágenes → extrae descripción del sistema visual → guarda
+async function analyzeAndSaveStyle() {
+  const geminiKey = document.getElementById('key-gemini').value.trim();
+  const name = document.getElementById('custom-style-name').value.trim();
+
+  if (!geminiKey) { alert('Necesitas ingresar tu API Key de Google AI Studio primero.'); return; }
+  if (!name) { alert('Ponle un nombre a tu estilo antes de continuar.'); document.getElementById('custom-style-name').focus(); return; }
+  if (!styleImgFiles.length) { alert('Sube al menos una imagen de referencia.'); return; }
+
+  const btn = document.getElementById('style-analyze-btn');
+  btn.disabled = true;
+  btn.textContent = 'Analizando…';
+
+  const progress = document.getElementById('style-progress');
+  const fill = document.getElementById('style-progress-fill');
+  const label = document.getElementById('style-progress-label');
+  const success = document.getElementById('style-success');
+  success.style.display = 'none';
+  progress.style.display = 'block';
+
+  const steps = [
+    { pct: 15, msg: 'Cargando imágenes de referencia…' },
+    { pct: 40, msg: 'Analizando paleta y tipografía…' },
+    { pct: 65, msg: 'Extrayendo layouts y elementos…' },
+    { pct: 85, msg: 'Generando descripción del sistema visual…' },
+    { pct: 100, msg: '✓ Validando estilo…' },
+  ];
+
+  let stepIdx = 0;
+  const ticker = setInterval(() => {
+    if (stepIdx < steps.length) {
+      fill.style.width = steps[stepIdx].pct + '%';
+      label.textContent = steps[stepIdx].msg;
+      stepIdx++;
+    }
+  }, 600);
+
+  try {
+    // Convertir imágenes a base64
+    const imgParts = await Promise.all(styleImgFiles.map(file => new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res({
+        inlineData: {
+          mimeType: file.type || 'image/jpeg',
+          data: e.target.result.split(',')[1]
+        }
+      });
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    })));
+
+    const prompt = `Eres un experto en diseño visual y sistemas de presentación.
+Analiza cuidadosamente estas imágenes de referencia de slides de presentación.
+
+Describe con MUCHO DETALLE todos los elementos visuales del sistema de diseño. Incluye:
+1. PALETA DE COLORES: colores exactos de fondo, texto, acentos y elementos decorativos (usa códigos hex aproximados)
+2. TIPOGRAFÍA: estilo de fuentes (serif/sans-serif), pesos, tamaños relativos, estilos (mayúsculas, tracking)
+3. ESTRUCTURA DE LAYOUTS: cómo se distribuye el contenido en los slides (paneles, splits, centrado, etc.)
+4. ELEMENTOS DECORATIVOS: formas geométricas, líneas, íconos, texturas, patrones de fondo
+5. JERARQUÍA VISUAL: cómo se distinguen títulos, subtítulos, cuerpo, labels
+6. TONO VISUAL GENERAL: minimalista, dramático, cálido, tecnológico, editorial, etc.
+7. USO DEL ESPACIO: densidad del contenido, uso del whitespace
+8. ESTILO DE IMÁGENES: si hay fotos, ilustraciones o espacios reservados para imágenes
+
+Escribe esta descripción como un DESIGN BRIEF DETALLADO que pueda ser usado por un diseñador para replicar exactamente este estilo visual en nuevas presentaciones. Sé específico con medidas relativas, proporciones y decisiones de diseño.
+
+Responde SOLO con el design brief en español, sin preámbulos.`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [...imgParts, { text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 2000 }
+        })
+      }
+    );
+
+    clearInterval(ticker);
+    fill.style.width = '100%';
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || `Error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const description = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!description.trim()) throw new Error('El modelo no devolvió descripción.');
+
+    // Guardar en localStorage
+    const styles = loadCustomStyles();
+    const newStyle = {
+      id: Date.now().toString(),
+      name: name,
+      description: description,
+      imgCount: styleImgFiles.length,
+      createdAt: new Date().toLocaleDateString('es-MX'),
+    };
+    styles.push(newStyle);
+    saveCustomStyles(styles);
+
+    // UX éxito
+    label.textContent = '✓ Estilo guardado y validado';
+    const successMsg = document.getElementById('style-success-msg');
+    successMsg.textContent = `"${name}" guardado correctamente — ya aparece en el selector`;
+    success.style.display = 'flex';
+
+    // Actualizar selector
+    refreshStyleSelector();
+
+    // Seleccionar el nuevo estilo automáticamente
+    const select = document.getElementById('style-preset');
+    select.value = 'custom_' + newStyle.id;
+
+    // Reset form
+    setTimeout(() => {
+      document.getElementById('custom-style-name').value = '';
+      document.getElementById('style-imgs-preview').innerHTML = '';
+      document.getElementById('style-img-count').textContent = '';
+      styleImgFiles = [];
+      progress.style.display = 'none';
+      fill.style.width = '0%';
+    }, 3000);
+
+  } catch(e) {
+    clearInterval(ticker);
+    progress.style.display = 'none';
+    alert('Error al analizar el estilo: ' + e.message);
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ Analizar y guardar estilo';
+}
+
+// ── ZOOM ─────────────────────────────────────────────────────
+let currentZoom = 1.0;
+const ZOOM_STEP = 0.15;
+const ZOOM_MIN  = 0.4;
+const ZOOM_MAX  = 2.0;
+
+function zoomSlide(dir) {
+  currentZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, currentZoom + dir * ZOOM_STEP));
+  const sw = document.getElementById('slide-wrapper');
+  if (sw) sw.style.transform = `scale(${currentZoom})`;
+  // Actualizar tooltip visual
+  const zoomPct = Math.round(currentZoom * 100);
+  document.querySelectorAll('[title^="Zoom"]').forEach(btn => {
+    if (btn.title.includes('in')) btn.title = `Zoom in (+) — ${zoomPct}%`;
+    if (btn.title.includes('out')) btn.title = `Zoom out (-) — ${zoomPct}%`;
+  });
+}
+
+// Reset zoom al cambiar de presentación
+function resetZoom() {
+  currentZoom = 1.0;
+  const sw = document.getElementById('slide-wrapper');
+  if (sw) sw.style.transform = 'scale(1)';
+}
+
+// ── SLIDE CONTENT SCALING ────────────────────────────────────
+// El modelo genera HTML para 1707×952px con px fijos.
+// Esta función escala el contenido del slide al tamaño real del contenedor.
+
+
+
+</script>
+</body>
+</html>
+<div id="img-progress-app" style="display:none;background:var(--bg);border-bottom:1px solid var(--border);padding:8px 20px;display:none;align-items:center;gap:12px;">
+  <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+    <div id="img-fill-app" style="height:100%;background:var(--accent,#2D5BE3);border-radius:2px;transition:width .3s;width:0%"></div>
+  </div>
+  <span id="img-label-app" style="font-size:.72rem;color:var(--text-muted);white-space:nowrap;min-width:120px;text-align:right;">Generando imágenes…</span>
+</div>

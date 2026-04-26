@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "SlidesPro Postgres",
+      "Group": "SlidesPro",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "slidespro",
+      "Username": "slidespro",
+      "SSLMode": "prefer"
+    }
+  }
+}

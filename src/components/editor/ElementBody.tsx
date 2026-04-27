@@ -3,6 +3,11 @@
 import type { Slide, SlideElement } from "@/lib/schema/slide";
 import type { ThemeTokens } from "@/lib/schema/theme";
 import { useEditorStore } from "@/lib/editor/store";
+import { IconView } from "@/components/elements/IconView";
+import { ChartView } from "@/components/elements/ChartView";
+import { TableView } from "@/components/elements/TableView";
+import { VideoView } from "@/components/elements/VideoView";
+import { EquationView } from "@/components/elements/EquationView";
 
 /**
  * Renderiza el contenido de cada elemento. Versión editor — soporta
@@ -41,11 +46,15 @@ export function ElementBody({
     case "shape":
       return <ShapeBody el={element} />;
     case "icon":
+      return <IconView el={element} />;
     case "chart":
+      return <ChartView el={element} />;
     case "table":
+      return <TableView el={element} />;
     case "video":
+      return <VideoView el={element} isPreview />;
     case "equation":
-      return <Placeholder label={element.type} />;
+      return <EquationView el={element} />;
   }
 }
 
@@ -224,23 +233,3 @@ function ShapeBody({ el }: { el: Extract<SlideElement, { type: "shape" }> }) {
   );
 }
 
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        border: "2px dashed #cbd5e1",
-        background: "#f8fafc",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#64748b",
-        fontFamily: "monospace",
-        fontSize: 18,
-      }}
-    >
-      [{label}]
-    </div>
-  );
-}

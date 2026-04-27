@@ -2,6 +2,11 @@
 
 import { CANVAS_HEIGHT, CANVAS_WIDTH, type Slide, type SlideElement } from "@/lib/schema/slide";
 import type { ThemeTokens } from "@/lib/schema/theme";
+import { IconView } from "@/components/elements/IconView";
+import { ChartView } from "@/components/elements/ChartView";
+import { TableView } from "@/components/elements/TableView";
+import { VideoView } from "@/components/elements/VideoView";
+import { EquationView } from "@/components/elements/EquationView";
 
 /**
  * Renderiza un Slide a HTML/CSS. Es la pieza compartida entre preview y editor.
@@ -107,15 +112,35 @@ function ElementRenderer({ element }: { element: SlideElement }) {
     case "shape":
       return <ShapeElementView el={element} style={baseStyle} />;
     case "icon":
-      return <PlaceholderEl style={baseStyle} label="icon" />;
+      return (
+        <div style={baseStyle}>
+          <IconView el={element} />
+        </div>
+      );
     case "chart":
-      return <PlaceholderEl style={baseStyle} label="chart" />;
+      return (
+        <div style={baseStyle}>
+          <ChartView el={element} />
+        </div>
+      );
     case "table":
-      return <PlaceholderEl style={baseStyle} label="table" />;
+      return (
+        <div style={baseStyle}>
+          <TableView el={element} />
+        </div>
+      );
     case "video":
-      return <PlaceholderEl style={baseStyle} label="video" />;
+      return (
+        <div style={baseStyle}>
+          <VideoView el={element} isPreview />
+        </div>
+      );
     case "equation":
-      return <PlaceholderEl style={baseStyle} label="equation" />;
+      return (
+        <div style={baseStyle}>
+          <EquationView el={element} />
+        </div>
+      );
   }
 }
 
@@ -287,25 +312,5 @@ function ShapeElementView({
   }
 
   return <div style={common} />;
-}
-
-function PlaceholderEl({ style, label }: { style: React.CSSProperties; label: string }) {
-  return (
-    <div
-      style={{
-        ...style,
-        border: "2px dashed #cbd5e1",
-        background: "#f8fafc",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#64748b",
-        fontFamily: "monospace",
-        fontSize: 18,
-      }}
-    >
-      [{label} — coming in Phase 3]
-    </div>
-  );
 }
 

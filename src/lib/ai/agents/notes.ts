@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { MODELS, assertGoogleApiKey } from "../providers";
+import { modelFor } from "../providers";
 import { NotesOutput, type AnalystOutput, type DesignerOutput } from "../schemas";
 import { NOTES_SYSTEM, buildNotesPrompt } from "../prompts/notes";
 
@@ -7,13 +7,12 @@ export type NotesInput = {
   analyst: AnalystOutput;
   designer: DesignerOutput;
   language: "es" | "en" | "pt";
+  apiKey?: string;
 };
 
 export async function runNotes(input: NotesInput): Promise<NotesOutput> {
-  assertGoogleApiKey();
-
   const { object } = await generateObject({
-    model: MODELS.fast(),
+    model: modelFor("fast", input.apiKey),
     system: NOTES_SYSTEM,
     prompt: buildNotesPrompt({
       slidesJson: JSON.stringify(input.designer.slides, null, 2),

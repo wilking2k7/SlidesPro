@@ -4,43 +4,51 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 /**
  * Providers IA. Las API keys NUNCA viajan al cliente — siempre se usan
- * desde server actions / route handlers.
+ * desde server actions / route handlers / jobs.
  *
- * Modelos elegidos:
- *  - Gemini 2.5 Flash: análisis narrativo y diseño (rápido, barato, bueno con
- *    JSON estructurado y video). Default.
- *  - Claude Sonnet (más adelante): refinamiento conversacional con tool use.
+ * Las funciones aceptan opcionalmente una `apiKey` resuelta por workspace.
+ * Si no se pasa, se cae a la variable de entorno (fallback global del SaaS
+ * en producción / dev local con .env).
+ *
+ * Modelos:
+ *  - Gemini 2.5 Flash: análisis narrativo y diseño (default).
+ *  - Gemini 2.5 Pro: cuando se pide "smart" (designer).
+ *  - Claude Sonnet (Fase 5): refinamiento conversacional con tool use.
  *  - OpenAI gpt-4o-mini: fallback opcional.
- *
- * Para imágenes usamos Gemini 2.0 Flash con image generation experimental
- * (ver lib/ai/image.ts).
  */
 
-export const google = createGoogleGenerativeAI({
-  apiKey: process.env.GOOGLE_AI_API_KEY,
-});
+export type ModelTier = "fast" | "balanced" | "smart" | "video";
 
-export const anthropic = process.env.ANTHROPIC_API_KEY
-  ? createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
-
-export const openai = process.env.OPENAI_API_KEY
-  ? createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
-
-export const MODELS = {
-  // Texto
-  fast: () => google("gemini-2.5-flash"),
-  balanced: () => google("gemini-2.5-flash"),
-  smart: () => google("gemini-2.5-pro"),
-  // Multimodal con video (legacy lo usaba para leer YouTube directo)
-  video: () => google("gemini-2.5-pro"),
-} as const;
-
-export function assertGoogleApiKey() {
-  if (!process.env.GOOGLE_AI_API_KEY) {
+export function googleClient(apiKey?: string) {
+  const key = apiKey || process.env.GOOGLE_AI_API_KEY;
+  if (!key) {
     throw new Error(
-      "GOOGLE_AI_API_KEY no configurada. Obtén una en https://aistudio.google.com/app/apikey"
+      "GOOGLE_AI_API_KEY no configurada. Añádela en /dashboard/settings o en el .env del servidor. Obtén una en https://aistudio.google.com/app/apikey"
     );
   }
+  return createGoogleGenerativeAI({ apiKey: key });
+}
+
+export function modelFor(tier: ModelTier, apiKey?: string) {
+  const client = googleClient(apiKey);
+  switch (tier) {
+    case "fast":
+    case "balanced":
+      return client("gemini-2.5-flash");
+    case "smart":
+    case "video":
+      return client("gemini-2.5-pro");
+  }
+}
+
+export function anthropicClient(apiKey?: string) {
+  const key = apiKey || process.env.ANTHROPIC_API_KEY;
+  if (!key) return null;
+  return createAnthropic({ apiKey: key });
+}
+
+export function openaiClient(apiKey?: string) {
+  const key = apiKey || process.env.OPENAI_API_KEY;
+  if (!key) return null;
+  return createOpenAI({ apiKey: key });
 }

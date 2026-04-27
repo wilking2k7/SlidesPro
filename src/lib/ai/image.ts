@@ -1,10 +1,8 @@
-import { assertGoogleApiKey } from "./providers";
-
 /**
  * Generación de imágenes con Gemini 2.0 Flash (image generation experimental).
  *
- * Fallback: si el modelo de imágenes no está disponible o falla, retorna null
- * y el render usa el placeholder SVG del slide builder.
+ * Acepta una `apiKey` resuelta por workspace. Si no se pasa, cae a
+ * GOOGLE_AI_API_KEY del entorno. Si tampoco existe, lanza error.
  *
  * El endpoint REST devuelve una imagen inline base64 en `inline_data.data`.
  */
@@ -16,11 +14,19 @@ export type GeneratedImage = {
   contentType: string; // "image/png" | "image/jpeg"
 };
 
-export async function generateImage(prompt: string): Promise<GeneratedImage | null> {
-  assertGoogleApiKey();
-  const apiKey = process.env.GOOGLE_AI_API_KEY!;
+export async function generateImage(
+  prompt: string,
+  apiKey?: string
+): Promise<GeneratedImage | null> {
+  const key = apiKey || process.env.GOOGLE_AI_API_KEY;
+  if (!key) {
+    console.warn(
+      "[image] GOOGLE_AI_API_KEY no configurada — saltando generación de imágenes."
+    );
+    return null;
+  }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${key}`;
   const body = {
     contents: [
       {
@@ -74,6 +80,5 @@ export async function generateImage(prompt: string): Promise<GeneratedImage | nu
 }
 
 function enrichPrompt(p: string): string {
-  // Asegura ratio 16:9 y consistencia editorial
   return `${p.trim()}. 16:9 aspect ratio, photographic, cinematic lighting, editorial composition, no text, no logos, no watermark.`;
 }

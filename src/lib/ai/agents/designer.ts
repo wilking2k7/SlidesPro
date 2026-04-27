@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { MODELS, assertGoogleApiKey } from "../providers";
+import { modelFor } from "../providers";
 import { DesignerOutput, type AnalystOutput } from "../schemas";
 import { DESIGNER_SYSTEM, buildDesignerPrompt } from "../prompts/designer";
 
@@ -8,13 +8,12 @@ export type DesignerInput = {
   slideCount: number;
   themeMood: string;
   language: "es" | "en" | "pt";
+  apiKey?: string;
 };
 
 export async function runDesigner(input: DesignerInput): Promise<DesignerOutput> {
-  assertGoogleApiKey();
-
   const { object } = await generateObject({
-    model: MODELS.smart(),
+    model: modelFor("smart", input.apiKey),
     system: DESIGNER_SYSTEM,
     prompt: buildDesignerPrompt({
       analystJson: JSON.stringify(input.analyst, null, 2),

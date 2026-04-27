@@ -84,6 +84,7 @@ model Workspace {
   presentations Presentation[]
   themes        Theme[]
   subscription  Subscription?
+  secrets       WorkspaceSecret[]
 }
 
 model WorkspaceMember {
@@ -287,6 +288,33 @@ model AIUsage {
   @@index([userId])
   @@index([workspaceId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API Keys / secrets per workspace (cifrados en reposo con AUTH_SECRET)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum SecretKind {
+  GOOGLE_AI
+  ANTHROPIC
+  OPENAI
+}
+
+model WorkspaceSecret {
+  id          String     @id @default(cuid())
+  workspaceId String
+  kind        SecretKind
+  // AES-256-GCM. Formato: <iv_hex>:<auth_tag_hex>:<ciphertext_hex>
+  encrypted   String     @db.Text
+  // Últimos 4 chars de la key original (para mostrar en UI sin descifrar)
+  hint        String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, kind])
+  @@index([workspaceId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

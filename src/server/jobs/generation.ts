@@ -6,6 +6,7 @@ import { runNotes } from "@/lib/ai/agents/notes";
 import { generateImage } from "@/lib/ai/image";
 import { buildSlide } from "@/lib/ai/layout-builders";
 import { uploadBuffer, makeAssetKey } from "@/lib/storage/r2";
+import { resolveSecret } from "@/lib/secrets";
 import type { Slide } from "@/lib/schema/slide";
 import type { SlideContent } from "@/lib/ai/schemas";
 import { z } from "zod";
@@ -61,6 +62,15 @@ export async function processGenerationJob(jobId: string): Promise<void> {
     const tokens = theme.tokens as unknown as ThemeTokens;
     const themeMood = tokens.mood;
 
+    // Resolve API key del workspace (BD cifrado) o fallback a env
+    const workspaceId = await getWorkspaceId(payload.presentationId);
+    const googleAiKey = await resolveSecret(workspaceId, "GOOGLE_AI");
+    if (!googleAiKey) {
+      throw new Error(
+        "API key de Gemini no configurada. Añádela en /dashboard/settings (https://aistudio.google.com/app/apikey)"
+      );
+    }
+
     // 1) Analyst
     await updateProgress(jobId, 15, "analyzing");
     const analyst = await runAnalyst({
@@ -68,6 +78,7 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       language: payload.language,
       slideCount: payload.slideCount,
       depth: payload.depth,
+      apiKey: googleAiKey,
     });
 
     // 2) Designer
@@ -77,6 +88,7 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       slideCount: payload.slideCount,
       themeMood,
       language: payload.language,
+      apiKey: googleAiKey,
     });
 
     // 3) Build Slides without images first (placeholders)
@@ -93,14 +105,20 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       ? generateAndAttachImages({
           jobId,
           presentationId: payload.presentationId,
-          workspaceId: await getWorkspaceId(payload.presentationId),
+          workspaceId,
           designerSlides: designer.slides,
           imagePrompts: analyst.imagePrompts,
           theme: tokens,
+          apiKey: googleAiKey,
         })
       : Promise.resolve(slides);
 
-    const notesPromise = runNotes({ analyst, designer, language: payload.language });
+    const notesPromise = runNotes({
+      analyst,
+      designer,
+      language: payload.language,
+      apiKey: googleAiKey,
+    });
 
     const [slidesWithImages, notes] = await Promise.all([imagesPromise, notesPromise]);
 
@@ -183,6 +201,7 @@ async function generateAndAttachImages(opts: {
   designerSlides: SlideContent[];
   imagePrompts: string[];
   theme: ThemeTokens;
+  apiKey: string;
 }): Promise<Slide[]> {
   // Para cada slide del designer que use imagen, encolar generación.
   const tasks: Array<{ slideIdx: number; prompt: string }> = [];
@@ -209,7 +228,7 @@ async function generateAndAttachImages(opts: {
       if (myIdx >= tasks.length) return;
       const t = tasks[myIdx];
       try {
-        const result = await generateImage(t.prompt);
+        const result = await generateImage(t.prompt, opts.apiKey);
         if (result) {
           const key = makeAssetKey({
             workspaceId: opts.workspaceId,

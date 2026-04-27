@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { MODELS, assertGoogleApiKey } from "../providers";
+import { modelFor } from "../providers";
 import { AnalystOutput } from "../schemas";
 import { ANALYST_SYSTEM, buildAnalystPrompt } from "../prompts/analyst";
 
@@ -8,13 +8,12 @@ export type AnalystInput = {
   language: "es" | "en" | "pt";
   slideCount: number;
   depth: "executive" | "detailed" | "step-by-step";
+  apiKey?: string;
 };
 
 export async function runAnalyst(input: AnalystInput): Promise<AnalystOutput> {
-  assertGoogleApiKey();
-
   const { object } = await generateObject({
-    model: MODELS.balanced(),
+    model: modelFor("balanced", input.apiKey),
     system: ANALYST_SYSTEM,
     prompt: buildAnalystPrompt(input),
     schema: AnalystOutput,

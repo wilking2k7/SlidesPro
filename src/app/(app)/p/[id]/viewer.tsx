@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import type { Slide } from "@/lib/schema/slide";
 import type { ThemeTokens } from "@/lib/schema/theme";
 import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 
 type SlideRow = { id: string; position: number; data: Slide; notes: string };
 
@@ -111,6 +113,13 @@ export function PresentationViewer({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/e/${id}`}>
+              <Pencil className="w-3.5 h-3.5" />
+              Editar
+            </Link>
+          </Button>
+          <div className="w-px h-5 bg-neutral-200 mx-1" />
           <Button
             variant="ghost"
             size="sm"

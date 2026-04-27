@@ -14,6 +14,10 @@ import {
   Upload,
   Loader2,
   CheckCircle2,
+  Plus,
+  X,
+  Trash2,
+  Wand2,
 } from "lucide-react";
 import type { PresentationTemplate } from "@/lib/templates";
 
@@ -21,6 +25,7 @@ type ThemeOption = {
   id: string;
   name: string;
   slug: string;
+  isPreset: boolean;
   accent: string;
   background: string;
   text: string;
@@ -30,13 +35,14 @@ type ThemeOption = {
 type SourceTab = "youtube" | "url" | "transcript" | "pdf" | "docx";
 
 export function NewPresentationForm({
-  themes,
+  themes: initialThemes,
   templates,
 }: {
   themes: ThemeOption[];
   templates: PresentationTemplate[];
 }) {
   const router = useRouter();
+  const [themes, setThemes] = useState(initialThemes);
   const [tab, setTab] = useState<SourceTab>("youtube");
 
   // Inputs por tab
@@ -318,40 +324,47 @@ export function NewPresentationForm({
             <h3 className="font-serif text-lg tracking-tight">Identidad gráfica</h3>
           </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {themes.map((t) => (
-            <button
+            <ThemeCard
               key={t.id}
-              type="button"
-              onClick={() => setThemeId(t.id)}
-              className={`text-left rounded-xl border-2 p-2 transition-all ${
-                themeId === t.id
-                  ? "border-blue-600 ring-2 ring-blue-600/30"
-                  : "border-slate-200 hover:border-slate-400"
-              }`}
-            >
-              <div
-                className="h-16 rounded-lg mb-2 relative overflow-hidden flex items-end p-2"
-                style={{ background: t.background }}
-              >
-                <div className="space-y-1 w-full">
-                  <div
-                    className="h-1 rounded w-2/3"
-                    style={{ background: t.text, opacity: 0.85 }}
-                  />
-                  <div className="h-1 rounded w-1/2" style={{ background: t.text, opacity: 0.4 }} />
-                </div>
-                <div
-                  className="absolute bottom-1.5 right-1.5 w-2.5 h-2.5 rounded-full"
-                  style={{ background: t.accent }}
-                />
-              </div>
-              <div className="text-sm font-medium truncate">{t.name}</div>
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">
-                {t.mood}
-              </div>
-            </button>
+              theme={t}
+              selected={themeId === t.id}
+              onSelect={() => setThemeId(t.id)}
+              onDelete={async () => {
+                if (!confirm(`¿Eliminar el estilo "${t.name}"?`)) return;
+                const res = await fetch(`/api/themes/${t.id}`, { method: "DELETE" });
+                if (!res.ok) {
+                  alert("No se pudo eliminar");
+                  return;
+                }
+                setThemes((arr) => arr.filter((x) => x.id !== t.id));
+                if (themeId === t.id) {
+                  const fallback = themes.find((x) => x.id !== t.id);
+                  if (fallback) setThemeId(fallback.id);
+                }
+              }}
+            />
           ))}
+
+          <CreateCustomThemeCard
+            onCreated={(theme) => {
+              setThemes((arr) => [
+                ...arr,
+                {
+                  id: theme.id,
+                  name: theme.name,
+                  slug: theme.slug,
+                  isPreset: false,
+                  accent: theme.accent,
+                  background: theme.background,
+                  text: theme.text,
+                  mood: theme.mood,
+                },
+              ]);
+              setThemeId(theme.id);
+            }}
+          />
         </div>
       </div>
 
@@ -540,3 +553,301 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const selectCls =
   "w-full text-sm px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
+
+// ─── Theme cards ─────────────────────────────────────────────────────────────
+
+function ThemeCard({
+  theme,
+  selected,
+  onSelect,
+  onDelete,
+}: {
+  theme: ThemeOption;
+  selected: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div
+      className={`group relative rounded-xl border-2 p-2 transition-all ${
+        selected
+          ? "border-blue-600 ring-2 ring-blue-600/30"
+          : "border-slate-200 hover:border-slate-400"
+      }`}
+    >
+      <button type="button" onClick={onSelect} className="w-full text-left">
+        <div
+          className="h-16 rounded-lg mb-2 relative overflow-hidden flex items-end p-2"
+          style={{ background: theme.background }}
+        >
+          <div className="space-y-1 w-full">
+            <div
+              className="h-1 rounded w-2/3"
+              style={{ background: theme.text, opacity: 0.85 }}
+            />
+            <div className="h-1 rounded w-1/2" style={{ background: theme.text, opacity: 0.4 }} />
+          </div>
+          <div
+            className="absolute bottom-1.5 right-1.5 w-2.5 h-2.5 rounded-full"
+            style={{ background: theme.accent }}
+          />
+          {!theme.isPreset && (
+            <div className="absolute top-1.5 left-1.5 text-[8px] font-bold tracking-wider uppercase bg-blue-600 text-white px-1.5 py-0.5 rounded-full">
+              Custom
+            </div>
+          )}
+        </div>
+        <div className="text-sm font-medium truncate">{theme.name}</div>
+        <div className="text-[10px] uppercase tracking-wider text-slate-400">{theme.mood}</div>
+      </button>
+
+      {!theme.isPreset && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirming) onDelete();
+            else {
+              setConfirming(true);
+              setTimeout(() => setConfirming(false), 3000);
+            }
+          }}
+          className={`absolute top-1.5 right-1.5 p-1 rounded-md text-xs transition-all ${
+            confirming
+              ? "bg-rose-600 text-white"
+              : "bg-white/95 border border-slate-200 text-slate-400 hover:text-rose-600 opacity-0 group-hover:opacity-100"
+          }`}
+          title={confirming ? "Click otra vez para confirmar" : "Eliminar estilo"}
+        >
+          {confirming ? <X className="w-3 h-3" /> : <Trash2 className="w-3 h-3" />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CreateCustomThemeCard({
+  onCreated,
+}: {
+  onCreated: (theme: {
+    id: string;
+    name: string;
+    slug: string;
+    accent: string;
+    background: string;
+    text: string;
+    mood: string;
+  }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function pickFiles(list: FileList | null) {
+    if (!list) return;
+    const accepted: File[] = [];
+    for (let i = 0; i < list.length && accepted.length + files.length < 15; i++) {
+      const f = list[i];
+      if (!/^image\/(png|jpe?g|webp)$/.test(f.type)) continue;
+      if (f.size > 8 * 1024 * 1024) continue;
+      accepted.push(f);
+    }
+    setFiles((prev) => [...prev, ...accepted]);
+  }
+
+  async function analyze() {
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Dale un nombre al estilo");
+      return;
+    }
+    if (files.length === 0) {
+      setError("Subí al menos una imagen de referencia");
+      return;
+    }
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("name", name.trim());
+      for (const f of files) fd.append("images", f);
+      const res = await fetch("/api/themes/analyze", { method: "POST", body: fd });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? `HTTP ${res.status}`);
+      }
+      const { theme } = (await res.json()) as {
+        theme: {
+          id: string;
+          slug: string;
+          name: string;
+          tokens: {
+            palette?: { accent?: string; background?: string; text?: string };
+            mood?: string;
+          };
+        };
+      };
+      onCreated({
+        id: theme.id,
+        slug: theme.slug,
+        name: theme.name,
+        accent: theme.tokens?.palette?.accent ?? "#2563eb",
+        background: theme.tokens?.palette?.background ?? "#ffffff",
+        text: theme.tokens?.palette?.text ?? "#0f172a",
+        mood: theme.tokens?.mood ?? "minimal",
+      });
+      // Reset form
+      setName("");
+      setFiles([]);
+      setOpen(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-xl border-2 border-dashed border-slate-300 p-2 hover:border-blue-500 hover:bg-blue-50/40 transition-all flex flex-col items-center justify-center min-h-[124px] group"
+      >
+        <div className="w-10 h-10 rounded-full bg-blue-50 group-hover:bg-blue-100 grid place-items-center mb-2 transition-colors">
+          <Plus className="w-5 h-5 text-blue-600" />
+        </div>
+        <div className="text-sm font-medium text-slate-700">Crear estilo visual</div>
+        <div className="text-[10px] uppercase tracking-wider text-slate-400 mt-0.5">
+          desde imágenes
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="col-span-2 sm:col-span-3 lg:col-span-4 card-editorial p-5 border-2 border-blue-200 bg-blue-50/30">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <div className="flex items-center gap-2 text-blue-600 mb-1">
+            <Wand2 className="w-4 h-4" />
+            <h4 className="font-serif text-lg tracking-tight">Crear estilo visual personalizado</h4>
+          </div>
+          <p className="text-xs text-slate-500">
+            Sube capturas de slides que te gusten (Canva, presentaciones que admires, lo que sea).
+            Gemini analiza el lenguaje visual y guarda un estilo reutilizable.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="p-1 rounded-md hover:bg-white text-slate-400 hover:text-slate-700"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Nombre del estilo (ej: Marca corporativa, Editorial Vogue, Tech minimalista…)"
+        maxLength={60}
+        className="w-full text-sm px-4 py-3 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 mb-3"
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        multiple
+        className="sr-only"
+        onChange={(e) => {
+          pickFiles(e.target.files);
+          e.target.value = ""; // reset para volver a poder elegir el mismo
+        }}
+      />
+
+      {files.length === 0 ? (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-white/80 px-6 py-10 transition-all flex flex-col items-center gap-2"
+        >
+          <ImageIcon className="w-7 h-7 text-blue-500" />
+          <div className="text-sm font-medium">Sube imágenes de referencia</div>
+          <div className="text-xs text-slate-500">
+            Capturas de slides que te gusten · hasta 15 imágenes · JPG, PNG, WEBP
+          </div>
+        </button>
+      ) : (
+        <div>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
+            {files.map((f, i) => (
+              <div
+                key={i}
+                className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 group"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={URL.createObjectURL(f)}
+                  alt={f.name}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
+                  className="absolute top-1 right-1 p-1 bg-black/70 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Quitar"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {files.length < 15 && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-video rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-500 grid place-items-center text-slate-400 hover:text-blue-600"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          <div className="text-xs text-slate-500 mb-3">
+            {files.length} / 15 imágenes
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700 mb-3">
+          {error}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        onClick={analyze}
+        disabled={analyzing || files.length === 0 || !name.trim()}
+        size="lg"
+        className="w-full"
+      >
+        {analyzing ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Analizando estilo con Gemini…
+          </>
+        ) : (
+          <>
+            <Wand2 className="w-4 h-4" />
+            Analizar y guardar estilo
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}

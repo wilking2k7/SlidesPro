@@ -3,15 +3,28 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { NewPresentationForm } from "./form";
 import { TEMPLATES } from "@/lib/templates";
+import { getPersonalWorkspaceId } from "@/lib/secrets";
 
 export default async function NewPresentationPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const workspaceId = await getPersonalWorkspaceId(session.user.id);
+
+  // Presets globales + custom themes del workspace, ordenados con presets
+  // primero (por nombre) y custom después (más recientes primero).
   const themes = await prisma.theme.findMany({
-    where: { isPreset: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, slug: true, tokens: true },
+    where: {
+      OR: [{ isPreset: true }, { workspaceId }],
+    },
+    orderBy: [{ isPreset: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      tokens: true,
+      isPreset: true,
+    },
   });
 
   return (
@@ -35,6 +48,7 @@ export default async function NewPresentationPage() {
           id: t.id,
           name: t.name,
           slug: t.slug,
+          isPreset: t.isPreset,
           accent:
             (t.tokens as { palette?: { accent?: string } })?.palette?.accent ?? "#000000",
           background:

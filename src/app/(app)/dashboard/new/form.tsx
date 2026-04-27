@@ -20,6 +20,7 @@ import {
   Wand2,
 } from "lucide-react";
 import type { PresentationTemplate } from "@/lib/templates";
+import { SourceValidator, type ValidationState } from "@/components/source-validator";
 
 type ThemeOption = {
   id: string;
@@ -50,6 +51,11 @@ export function NewPresentationForm({
   const [articleUrl, setArticleUrl] = useState("");
   const [transcript, setTranscript] = useState("");
 
+  // Estado de validación por tab (lo lleva el SourceValidator)
+  const [ytValidation, setYtValidation] = useState<ValidationState>({ status: "idle" });
+  const [urlValidation, setUrlValidation] = useState<ValidationState>({ status: "idle" });
+  const [trValidation, setTrValidation] = useState<ValidationState>({ status: "idle" });
+
   // Para PDF/DOCX: subimos el archivo y guardamos el texto extraído
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<{
@@ -74,6 +80,21 @@ export function NewPresentationForm({
   const [error, setError] = useState<string | null>(null);
 
   const selectedTemplate = templates.find((t) => t.id === templateId);
+
+  // ¿La fuente actual está validada y lista? (controla disabled del submit)
+  const isCurrentSourceReady = (() => {
+    switch (tab) {
+      case "youtube":
+        return ytValidation.status === "valid";
+      case "url":
+        return urlValidation.status === "valid";
+      case "transcript":
+        return trValidation.status === "valid";
+      case "pdf":
+      case "docx":
+        return uploadedFile !== null;
+    }
+  })();
 
   // ── Resolución de fuente ────────────────────────────────────────────────
   async function resolveSource(): Promise<string> {
@@ -212,10 +233,17 @@ export function NewPresentationForm({
               placeholder="https://www.youtube.com/watch?v=… o /shorts/…"
               className="w-full text-base px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
             />
-            <p className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
-              <Globe className="w-3 h-3" />
-              Gemini lee el video directamente desde YouTube (incluido shorts).
-            </p>
+            {!youtubeUrl && (
+              <p className="mt-2 text-xs text-slate-500 flex items-center gap-1.5">
+                <Globe className="w-3 h-3" />
+                Gemini lee el video directamente desde YouTube (incluido shorts).
+              </p>
+            )}
+            <SourceValidator
+              value={youtubeUrl}
+              kind="youtube"
+              onChange={setYtValidation}
+            />
           </>
         )}
 
@@ -228,9 +256,16 @@ export function NewPresentationForm({
               placeholder="https://… (artículo de blog, post, página web)"
               className="w-full text-base px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
             />
-            <p className="mt-2 text-xs text-slate-500">
-              Extrae el texto principal de la página antes de generar la presentación.
-            </p>
+            {!articleUrl && (
+              <p className="mt-2 text-xs text-slate-500">
+                Extraemos el texto principal de la página antes de generar.
+              </p>
+            )}
+            <SourceValidator
+              value={articleUrl}
+              kind="url"
+              onChange={setUrlValidation}
+            />
           </>
         )}
 
@@ -243,10 +278,11 @@ export function NewPresentationForm({
               placeholder="Pega el transcript completo aquí, o describe el tema con detalle…"
               className="w-full text-sm px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 font-mono leading-relaxed"
             />
-            <div className="mt-2 text-xs text-slate-500 flex justify-between">
-              <span>{transcript.length} caracteres</span>
-              <span>{transcript.length < 20 ? "mín. 20" : "✓ ok"}</span>
-            </div>
+            <SourceValidator
+              value={transcript}
+              kind="transcript"
+              onChange={setTrValidation}
+            />
           </>
         )}
 
@@ -440,8 +476,22 @@ export function NewPresentationForm({
         </div>
       )}
 
-      <div className="flex justify-end pt-2">
-        <Button type="submit" disabled={submitting} size="xl">
+      <div className="flex items-center justify-between pt-2 gap-3">
+        <div className="text-xs text-slate-500">
+          {!isCurrentSourceReady && (
+            <>
+              {tab === "youtube" && !youtubeUrl && "Pega un link de YouTube para continuar"}
+              {tab === "url" && !articleUrl && "Pega una URL para continuar"}
+              {tab === "transcript" && !transcript && "Pega un transcript para continuar"}
+              {(tab === "pdf" || tab === "docx") && !uploadedFile && "Sube un archivo para continuar"}
+              {((tab === "youtube" && youtubeUrl) ||
+                (tab === "url" && articleUrl) ||
+                (tab === "transcript" && transcript)) &&
+                "Esperando validación…"}
+            </>
+          )}
+        </div>
+        <Button type="submit" disabled={submitting || !isCurrentSourceReady} size="xl">
           <Sparkles className="w-4 h-4" />
           {submitting ? "Encolando…" : "Generar presentación"}
         </Button>

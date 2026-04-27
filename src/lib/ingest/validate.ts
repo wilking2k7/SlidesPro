@@ -17,6 +17,10 @@ export type YouTubeMeta = {
   author: string;
   thumbnail: string;
   duration?: string;
+  /** Si los subtítulos están disponibles, podemos generar aún si Gemini falla */
+  hasTranscript: boolean;
+  transcriptLang?: string;
+  transcriptChars?: number;
 };
 export type YouTubeError = { ok: false; error: string; code?: string };
 
@@ -33,48 +37,101 @@ export async function validateYouTube(
   const oembed = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+  let oembedResult:
+    | { title: string; author_name: string; thumbnail_url: string }
+    | null = null;
+  let oembedError: YouTubeError | null = null;
+
   try {
     const res = await fetch(oembed, { signal: ctrl.signal });
     if (res.status === 401) {
-      return {
+      oembedError = {
         ok: false,
-        error: "Video privado o restringido por edad — Gemini no podrá leerlo",
+        error: "Video privado o restringido — Gemini no podrá leerlo directo",
         code: "PRIVATE",
       };
-    }
-    if (res.status === 404) {
-      return { ok: false, error: "Video no encontrado", code: "NOT_FOUND" };
-    }
-    if (!res.ok) {
-      return {
+    } else if (res.status === 404) {
+      oembedError = { ok: false, error: "Video no encontrado", code: "NOT_FOUND" };
+    } else if (!res.ok) {
+      oembedError = {
         ok: false,
         error: `YouTube respondió ${res.status}`,
         code: "HTTP_ERROR",
       };
+    } else {
+      oembedResult = (await res.json()) as {
+        title: string;
+        author_name: string;
+        thumbnail_url: string;
+      };
     }
-    const data = (await res.json()) as {
-      title: string;
-      author_name: string;
-      thumbnail_url: string;
-    };
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      oembedError = { ok: false, error: "Tiempo de espera agotado", code: "TIMEOUT" };
+    } else {
+      oembedError = {
+        ok: false,
+        error: "No se pudo validar el video",
+        code: "FETCH_ERROR",
+      };
+    }
+  } finally {
+    clearTimeout(t);
+  }
+
+  // Probamos si hay subtítulos disponibles. Si los hay, el video puede
+  // generar incluso si oEmbed falló (privado/restringido).
+  const transcriptInfo = await peekTranscript(id);
+
+  if (oembedResult) {
     return {
       ok: true,
       videoId: id,
-      title: data.title,
-      author: data.author_name,
-      thumbnail: data.thumbnail_url,
+      title: oembedResult.title,
+      author: oembedResult.author_name,
+      thumbnail: oembedResult.thumbnail_url,
+      hasTranscript: !!transcriptInfo,
+      transcriptLang: transcriptInfo?.lang,
+      transcriptChars: transcriptInfo?.chars,
     };
-  } catch (err) {
-    if ((err as Error).name === "AbortError") {
-      return { ok: false, error: "Tiempo de espera agotado", code: "TIMEOUT" };
-    }
+  }
+
+  // oEmbed falló pero hay subtítulos → todavía podemos generar
+  if (transcriptInfo) {
     return {
-      ok: false,
-      error: "No se pudo validar el video",
-      code: "FETCH_ERROR",
+      ok: true,
+      videoId: id,
+      title: `Video ${id} (subtítulos disponibles)`,
+      author: "—",
+      thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      hasTranscript: true,
+      transcriptLang: transcriptInfo.lang,
+      transcriptChars: transcriptInfo.chars,
     };
-  } finally {
-    clearTimeout(t);
+  }
+
+  return oembedError ?? { ok: false, error: "No se pudo validar el video" };
+}
+
+/**
+ * Verifica si los subtítulos están disponibles. Muy rápido — solo descarga
+ * los primeros segmentos para chequear, no el transcript completo (que
+ * vendría después en la generación si Gemini falla).
+ */
+async function peekTranscript(
+  videoId: string
+): Promise<{ lang: string; chars: number } | null> {
+  try {
+    // Import dinámico para evitar bundling en edge runtime
+    const { fetchYouTubeTranscript } = await import("./youtube-transcript");
+    const result = await fetchYouTubeTranscript(videoId);
+    if (result && result.charCount > 50) {
+      return { lang: result.lang, chars: result.charCount };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 

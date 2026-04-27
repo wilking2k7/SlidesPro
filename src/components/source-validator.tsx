@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, AlertCircle, Loader2, Youtube, Globe } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Youtube,
+  Globe,
+  Captions,
+} from "lucide-react";
 
 /**
  * Validador en vivo para fuentes (YouTube / URL article / Transcript / PDF /
@@ -28,6 +35,10 @@ export type ValidationMeta = {
   domain?: string;
   description?: string;
   chars?: number;
+  /** YouTube: si hay subtítulos disponibles como fallback cuando Gemini falla */
+  hasTranscript?: boolean;
+  transcriptLang?: string;
+  transcriptChars?: number;
 };
 
 export function SourceValidator({
@@ -94,6 +105,9 @@ export function SourceValidator({
             meta.title = data.title;
             meta.author = data.author;
             meta.thumbnail = data.thumbnail;
+            meta.hasTranscript = data.hasTranscript;
+            meta.transcriptLang = data.transcriptLang;
+            meta.transcriptChars = data.transcriptChars;
           } else {
             meta.title = data.title;
             meta.domain = data.domain;
@@ -191,6 +205,18 @@ export function SourceValidator({
             <> · ~{m.chars.toLocaleString()} chars en preview</>
           )}
         </div>
+        {m.kind === "youtube" && m.hasTranscript && (
+          <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+            <Captions className="w-3 h-3" />
+            Subtítulos disponibles ({m.transcriptLang}, {m.transcriptChars?.toLocaleString()} chars)
+          </div>
+        )}
+        {m.kind === "youtube" && m.hasTranscript === false && (
+          <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+            <AlertCircle className="w-3 h-3" />
+            Sin subtítulos · si Gemini falla, no podremos generar
+          </div>
+        )}
         {m.description && (
           <div className="text-xs text-slate-500 mt-1 line-clamp-2 leading-snug">
             {m.description}

@@ -17,51 +17,62 @@ Sucesor SaaS de [`legacy/SlidesIA.html`](./legacy/SlidesIA.html) (single-file PO
 - **BullMQ** + Redis para jobs largos
 - Deploy en **Railway** (Docker)
 
-## Quickstart local con Docker (recomendado)
+## Quickstart con Docker
 
-Necesitas Docker Desktop corriendo. Los puertos elegidos no chocan con otros stacks típicos en `5432/5433` ni `5050/5051`.
+**Todo el stack corre en Docker — un solo comando levanta app + DB + Redis + pgAdmin.**
+Necesitas Docker Desktop corriendo. Los puertos no chocan con los stacks típicos en `5432`/`5050`.
 
 ```bash
-# 1. Variables de entorno
+# 1. Variables de entorno (rellena cuando estés listo: OAuth, Gemini, etc.)
 cp .env.example .env.local
-# .env.local viene listo para Docker — solo añade AUTH_SECRET y un provider OAuth.
-# Generar AUTH_SECRET: openssl rand -base64 32
 
-# 2. Levantar Postgres + Redis + pgAdmin
-docker compose up -d
-# Postgres → localhost:5434
-# Redis    → localhost:6380
-# pgAdmin  → http://localhost:5052  (admin@slidespro.local / admin)
-#            el servidor "SlidesPro Postgres" ya viene preconfigurado
+# 2. Levantar TODO el stack
+docker compose up -d --build
 
-# 3. Instalar dependencias y migrar
-npm install
-npm run db:migrate
-npm run db:seed   # 5 themes preset (Apple, Editorial, CleanTech, Bold, Dark)
+# Servicios:
+#   App      → http://localhost:3000
+#   Postgres → localhost:5434  (user/db: slidespro)
+#   Redis    → localhost:6380
+#   pgAdmin  → http://localhost:5052  (admin@slidespro.app / admin)
+#              servidor "SlidesPro Postgres" ya preconfigurado
 
-# 4. Dev server (en host, hot reload rápido)
-npm run dev
-```
-
-Abre [http://localhost:3000](http://localhost:3000).
-
-### Modo "todo en Docker"
-
-Si prefieres correr también la app en contenedor:
-
-```bash
-docker compose --profile full up -d
+# 3. Ver logs de la app (migraciones + seed corren al primer arranque)
 docker compose logs -f app
 ```
+
+Abre [http://localhost:3000](http://localhost:3000). Las migraciones y los 5 themes preset
+(Apple, Editorial, CleanTech, Bold, Dark) se aplican automáticamente.
 
 ### Comandos útiles
 
 ```bash
-docker compose up -d              # levantar servicios
+docker compose up -d --build      # levantar todo (build si cambió Dockerfile)
 docker compose down               # apagar
-docker compose down -v            # apagar y borrar volúmenes (reset DB)
-docker compose logs -f postgres   # ver logs
+docker compose down -v            # apagar + borrar volúmenes (reset DB completo)
+docker compose logs -f app        # logs de la app
+docker compose logs -f postgres   # logs de Postgres
 docker compose ps                 # estado
+docker compose exec app sh        # shell dentro del contenedor de la app
+docker compose exec app npx prisma studio  # GUI de Prisma en :5555
+```
+
+### Modo dev híbrido (hot reload más rápido)
+
+Si quieres correr la app en host con `npm run dev` (Turbopack es más responsivo
+fuera de Docker), arranca solo los servicios:
+
+```bash
+docker compose up -d postgres redis pgadmin
+npm install
+npm run db:migrate     # genera/aplica migraciones
+npm run db:seed
+npm run dev
+```
+
+Y en `.env.local` descomenta:
+```
+DATABASE_URL=postgres://slidespro:slidespro@localhost:5434/slidespro
+REDIS_URL=redis://localhost:6380
 ```
 
 ### Generar AUTH_SECRET
@@ -91,8 +102,8 @@ openssl rand -base64 32
 ```
 Dockerfile              # build prod multi-stage (Railway)
 Dockerfile.dev          # dev container con hot reload
-docker-compose.yml      # postgres + redis + pgadmin (+ app via profile)
-docker/pgadmin/         # servidor preconfigurado
+docker-compose.yml      # stack completo: app + postgres + redis + pgadmin
+docker/pgadmin/         # servidor SlidesPro preconfigurado
 .dockerignore
 ```
 

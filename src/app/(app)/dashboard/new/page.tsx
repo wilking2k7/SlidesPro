@@ -14,11 +14,19 @@ export default async function NewPresentationPage() {
   });
 
   return (
-    <main className="flex-1 px-8 py-10 max-w-4xl mx-auto w-full">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Nueva presentación</h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Pega un transcript, una URL o un brief. La IA genera el deck en ~1 minuto.
+    <main className="flex-1 px-6 py-12 max-w-3xl mx-auto w-full">
+      <div className="mb-10">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-600 mb-3">
+          Nueva presentación
+        </div>
+        <h1 className="font-serif text-5xl sm:text-6xl tracking-tight leading-[1.05]">
+          Convierte cualquier <span className="editorial-italic">video</span>
+          <br />
+          en una <span className="editorial-italic">presentación</span>
+        </h1>
+        <p className="mt-5 text-base text-slate-600 leading-relaxed max-w-xl">
+          Pega un transcript, una URL de YouTube o un brief —
+          slides únicos generados con IA en segundos.
         </p>
       </div>
       <NewPresentationForm
@@ -31,6 +39,10 @@ export default async function NewPresentationPage() {
           background:
             (t.tokens as { palette?: { background?: string } })?.palette?.background ??
             "#ffffff",
+          text:
+            (t.tokens as { palette?: { text?: string } })?.palette?.text ?? "#0f172a",
+          mood:
+            (t.tokens as { mood?: string })?.mood ?? "minimal",
         }))}
       />
     </main>

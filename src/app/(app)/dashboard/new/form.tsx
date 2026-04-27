@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Sparkles, Image as ImageIcon, Globe, FileText } from "lucide-react";
 
 type ThemeOption = {
   id: string;
@@ -10,10 +11,13 @@ type ThemeOption = {
   slug: string;
   accent: string;
   background: string;
+  text: string;
+  mood: string;
 };
 
 export function NewPresentationForm({ themes }: { themes: ThemeOption[] }) {
   const router = useRouter();
+  const [tab, setTab] = useState<"transcript" | "youtube">("transcript");
   const [source, setSource] = useState("");
   const [language, setLanguage] = useState<"es" | "en" | "pt">("es");
   const [slideCount, setSlideCount] = useState(8);
@@ -59,111 +63,221 @@ export function NewPresentationForm({ themes }: { themes: ThemeOption[] }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Fuente</label>
-        <textarea
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-          rows={10}
-          placeholder="Pega un transcript, una URL de YouTube, un artículo o describe el tema con detalle…"
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono"
+    <form onSubmit={onSubmit} className="space-y-5">
+      {/* Source picker (tabs) */}
+      <div className="card-editorial p-1.5 flex gap-1.5">
+        <TabButton
+          active={tab === "youtube"}
+          onClick={() => setTab("youtube")}
+          icon={<Globe className="w-4 h-4" />}
+          label="Link de YouTube"
         />
-        <div className="text-xs text-neutral-500">{source.length} caracteres</div>
+        <TabButton
+          active={tab === "transcript"}
+          onClick={() => setTab("transcript")}
+          icon={<FileText className="w-4 h-4" />}
+          label="Pegar Transcript"
+        />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Tema visual</label>
+      {/* Source input */}
+      <div className="card-editorial p-5">
+        {tab === "youtube" ? (
+          <>
+            <input
+              type="url"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full text-base px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Gemini lee el video directamente desde YouTube.
+            </p>
+          </>
+        ) : (
+          <>
+            <textarea
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              rows={9}
+              placeholder="Pega el transcript completo aquí, o describe el tema con detalle…"
+              className="w-full text-sm px-4 py-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 font-mono leading-relaxed"
+            />
+            <div className="mt-2 text-xs text-slate-500 flex justify-between">
+              <span>{source.length} caracteres</span>
+              <span>{source.length < 20 ? "mín. 20" : "✓ ok"}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Theme picker */}
+      <div className="card-editorial p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-1">
+              Estilo visual
+            </div>
+            <h3 className="font-serif text-lg tracking-tight">Elige un tema</h3>
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {themes.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setThemeId(t.id)}
-              className={`rounded-md border-2 p-3 text-left transition-colors ${
+              className={`text-left rounded-xl border-2 p-2 transition-all ${
                 themeId === t.id
-                  ? "border-neutral-900"
-                  : "border-neutral-200 hover:border-neutral-400"
+                  ? "border-blue-600 ring-2 ring-blue-600/30"
+                  : "border-slate-200 hover:border-slate-400"
               }`}
             >
               <div
-                className="h-12 rounded mb-2 relative overflow-hidden"
+                className="h-16 rounded-lg mb-2 relative overflow-hidden flex items-end p-2"
                 style={{ background: t.background }}
               >
+                <div className="space-y-1 w-full">
+                  <div
+                    className="h-1 rounded w-2/3"
+                    style={{ background: t.text, opacity: 0.85 }}
+                  />
+                  <div className="h-1 rounded w-1/2" style={{ background: t.text, opacity: 0.4 }} />
+                </div>
                 <div
-                  className="absolute bottom-1 left-1 right-1 h-2 rounded"
+                  className="absolute bottom-1.5 right-1.5 w-2.5 h-2.5 rounded-full"
                   style={{ background: t.accent }}
                 />
               </div>
               <div className="text-sm font-medium truncate">{t.name}</div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                {t.mood}
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Idioma</label>
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as "es" | "en" | "pt")}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          >
-            <option value="es">Español</option>
-            <option value="en">English</option>
-            <option value="pt">Português</option>
-          </select>
+      {/* Settings */}
+      <div className="card-editorial p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Field label="Idioma">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as "es" | "en" | "pt")}
+              className={selectCls}
+            >
+              <option value="es">Español</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+            </select>
+          </Field>
+          <Field label="Slides">
+            <select
+              value={slideCount}
+              onChange={(e) => setSlideCount(Number(e.target.value))}
+              className={selectCls}
+            >
+              {[6, 8, 10, 12, 15, 18].map((n) => (
+                <option key={n} value={n}>
+                  {n} slides
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Profundidad">
+            <select
+              value={depth}
+              onChange={(e) => setDepth(e.target.value as typeof depth)}
+              className={selectCls}
+            >
+              <option value="executive">Ejecutivo</option>
+              <option value="detailed">Detallado</option>
+              <option value="step-by-step">Paso a paso</option>
+            </select>
+          </Field>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Slides</label>
-          <select
-            value={slideCount}
-            onChange={(e) => setSlideCount(Number(e.target.value))}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          >
-            {[6, 8, 10, 12, 15, 18].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Profundidad</label>
-          <select
-            value={depth}
-            onChange={(e) => setDepth(e.target.value as typeof depth)}
-            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-          >
-            <option value="executive">Ejecutivo</option>
-            <option value="detailed">Detallado</option>
-            <option value="step-by-step">Paso a paso</option>
-          </select>
-        </div>
+        <label className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-100 cursor-pointer">
+          <div className="flex items-start gap-3">
+            <ImageIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <div className="text-sm font-medium">Generar imágenes con IA</div>
+              <div className="text-xs text-slate-500 mt-0.5">
+                gemini-2.0-flash-image · suma ~30s al tiempo total
+              </div>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={generateImages}
+            onChange={(e) => setGenerateImages(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full relative transition-colors">
+            <div
+              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                generateImages ? "translate-x-[22px]" : "translate-x-0.5"
+              }`}
+            />
+          </div>
+        </label>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={generateImages}
-          onChange={(e) => setGenerateImages(e.target.checked)}
-        />
-        Generar imágenes IA (suma ~30s)
-      </label>
-
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button type="submit" disabled={submitting} size="lg">
+      <div className="flex justify-end pt-2">
+        <Button type="submit" disabled={submitting} size="xl">
+          <Sparkles className="w-4 h-4" />
           {submitting ? "Encolando…" : "Generar presentación"}
         </Button>
       </div>
     </form>
   );
 }
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 text-sm font-medium rounded-xl transition-all ${
+        active
+          ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+          : "text-slate-500 hover:text-slate-900"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">
+        {label}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const selectCls =
+  "w-full text-sm px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";

@@ -9,13 +9,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between px-6 py-3 border-b border-neutral-100">
-        <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold">
-          <span className="inline-block w-5 h-5 rounded bg-neutral-900" />
-          SlidesPro
+      <header className="flex items-center justify-between px-6 py-4 bg-white/80 backdrop-blur-sm border-b border-slate-200/60">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 grid place-items-center shadow-sm shadow-blue-600/30">
+            <div className="grid grid-cols-2 gap-[2px]">
+              <div className="w-1.5 h-1.5 bg-white rounded-[1px]" />
+              <div className="w-1.5 h-1.5 bg-white rounded-[1px]" />
+              <div className="w-1.5 h-1.5 bg-white rounded-[1px]" />
+              <div className="w-1.5 h-1.5 bg-white rounded-[1px]" />
+            </div>
+          </div>
+          <span className="font-serif text-lg tracking-tight">SlidesPro</span>
         </Link>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-neutral-500">{session.user.email}</span>
+          <span className="text-xs text-slate-500 hidden sm:inline">{session.user.email}</span>
           <form
             action={async () => {
               "use server";

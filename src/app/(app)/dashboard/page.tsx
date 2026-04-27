@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
+import { Sparkles, FileText, Clock } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -14,53 +15,151 @@ export default async function DashboardPage() {
     select: {
       id: true,
       title: true,
+      description: true,
       status: true,
       updatedAt: true,
       coverUrl: true,
+      _count: { select: { slides: true } },
     },
   });
 
   return (
-    <main className="flex-1 px-8 py-10">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mis presentaciones</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            {presentations.length === 0
-              ? "Aún no has creado ninguna. Empieza por la primera."
-              : `${presentations.length} presentaciones guardadas.`}
-          </p>
+    <main className="flex-1 flex">
+      {/* Sidebar HISTORIAL — al estilo legacy */}
+      <aside className="w-64 shrink-0 border-r border-slate-200/60 bg-white/40 backdrop-blur-sm p-5 hidden lg:block">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-600">
+            Historial
+          </div>
+          <span className="text-xs text-slate-400 tabular-nums">{presentations.length}</span>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/new">+ Nueva presentación</Link>
-        </Button>
-      </div>
+        {presentations.length === 0 ? (
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Las presentaciones generadas aparecerán aquí.
+          </p>
+        ) : (
+          <ul className="space-y-1">
+            {presentations.slice(0, 12).map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/p/${p.id}`}
+                  className="block px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
+                >
+                  <div className="text-sm text-slate-900 group-hover:text-blue-700 truncate font-medium">
+                    {p.title || "Sin título"}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    {p._count.slides} slides · {fmtRelative(p.updatedAt)}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
 
-      {presentations.length === 0 ? (
-        <Link
-          href="/dashboard/new"
-          className="block rounded-lg border border-dashed border-neutral-300 px-8 py-16 text-center text-sm text-neutral-500 hover:border-neutral-500 hover:bg-neutral-50 transition-colors"
-        >
-          Crea tu primera presentación →
-        </Link>
-      ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {presentations.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={`/p/${p.id}`}
-                className="block rounded-lg border border-neutral-200 hover:border-neutral-400 transition-colors p-4"
-              >
-                <div className="aspect-video bg-neutral-100 rounded mb-3" />
-                <div className="text-sm font-medium truncate">{p.title}</div>
-                <div className="text-xs text-neutral-500 mt-1">
-                  {p.status} · {p.updatedAt.toLocaleDateString()}
-                </div>
+      {/* Contenido principal */}
+      <div className="flex-1 px-6 sm:px-12 py-12 max-w-5xl mx-auto w-full">
+        <div className="mb-12 max-w-2xl">
+          <h1 className="font-serif text-5xl sm:text-6xl tracking-tight leading-[1.05]">
+            Crea una <span className="editorial-italic">presentación</span> nueva
+          </h1>
+          <p className="mt-5 text-lg text-slate-600 leading-relaxed">
+            Pega un transcript, una URL de YouTube o un brief — la IA genera el deck completo
+            en aproximadamente un minuto.
+          </p>
+          <div className="mt-7 flex gap-3">
+            <Button asChild size="xl">
+              <Link href="/dashboard/new">
+                <Sparkles className="w-4 h-4" />
+                Nueva presentación
               </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-serif text-2xl tracking-tight">Tus presentaciones</h2>
+          <span className="text-xs text-slate-500 tabular-nums">
+            {presentations.length} guardadas
+          </span>
+        </div>
+
+        {presentations.length === 0 ? (
+          <Link
+            href="/dashboard/new"
+            className="block card-editorial p-12 text-center hover:border-blue-200 hover:shadow-lg transition-all group"
+          >
+            <div className="mx-auto w-14 h-14 rounded-full bg-blue-50 grid place-items-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="font-serif text-2xl mb-2">Aún no tienes presentaciones</div>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto">
+              Crea la primera en menos de un minuto. Solo necesitas un transcript o una URL.
+            </p>
+          </Link>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {presentations.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/p/${p.id}`}
+                  className="card-editorial p-0 overflow-hidden hover:-translate-y-0.5 transition-all block group"
+                >
+                  <div
+                    className="aspect-video bg-gradient-to-br from-slate-100 to-blue-50 relative"
+                    style={
+                      p.coverUrl
+                        ? { backgroundImage: `url(${p.coverUrl})`, backgroundSize: "cover" }
+                        : undefined
+                    }
+                  >
+                    {!p.coverUrl && (
+                      <div className="absolute inset-0 grid place-items-center">
+                        <FileText className="w-8 h-8 text-slate-300" />
+                      </div>
+                    )}
+                    {p.status === "GENERATING" && (
+                      <div className="absolute inset-0 bg-blue-600/85 backdrop-blur-sm grid place-items-center">
+                        <span className="text-white text-xs font-medium tracking-wide">
+                          Generando…
+                        </span>
+                      </div>
+                    )}
+                    {p.status === "ERROR" && (
+                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-medium uppercase tracking-wider">
+                        Error
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <div className="font-medium text-slate-900 truncate group-hover:text-blue-700">
+                      {p.title || "Sin título"}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3" />
+                      {fmtRelative(p.updatedAt)}
+                      {p._count.slides > 0 && <span>· {p._count.slides} slides</span>}
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </main>
   );
+}
+
+function fmtRelative(d: Date): string {
+  const diff = Date.now() - d.getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "ahora";
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h}h`;
+  const days = Math.floor(h / 24);
+  if (days < 30) return `hace ${days}d`;
+  return d.toLocaleDateString();
 }

@@ -1,21 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Serif_Display, DM_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const dmSerif = DM_Serif_Display({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "SlidesPro — AI presentations that don't look like AI",
+  title: "SlidesPro — Presentaciones IA editables",
   description:
-    "Generate beautiful, fully editable presentations from any source. Powered by Gemini, Claude and OpenAI.",
+    "Convierte cualquier video, transcript o brief en una presentación editable con narrativa, diseño y datos.",
 };
 
 export default function RootLayout({
@@ -26,11 +34,12 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${dmSerif.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body
-        className="min-h-full flex flex-col bg-white text-neutral-900"
+        className="min-h-full flex flex-col bg-[#eff3ff] text-slate-900"
+        style={{ fontFamily: "var(--font-sans)" }}
         suppressHydrationWarning
       >
         {children}

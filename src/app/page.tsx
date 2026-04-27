@@ -34,7 +34,8 @@ export default async function Landing() {
       </header>
 
       {/* Hero */}
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 max-w-5xl mx-auto w-full">
+      <main className="flex flex-1 flex-col items-center px-6 pt-12 pb-16 max-w-6xl mx-auto w-full">
+        <span className="brand-chip mb-6">Editorial · IA · Pro</span>
         <h1 className="editorial-display text-center text-5xl sm:text-7xl md:text-[88px] leading-[0.95]">
           Convierte cualquier{" "}
           <span className="editorial-italic">video</span>
@@ -54,9 +55,14 @@ export default async function Landing() {
           </Button>
           <Button asChild size="xl" variant="outline">
             <a href="https://github.com/wilking2k7/SlidesPro" target="_blank" rel="noreferrer">
-              Ver en GitHub
+              Ver demo
             </a>
           </Button>
+        </div>
+
+        {/* Slide preview mockup en el hero */}
+        <div className="mt-20 w-full max-w-4xl">
+          <SlidePreview />
         </div>
 
         {/* Features */}
@@ -119,6 +125,75 @@ function FeatureCard({
       </div>
       <div className="font-serif text-xl tracking-tight mb-2">{title}</div>
       <div className="text-sm text-slate-600 leading-relaxed">{body}</div>
+    </div>
+  );
+}
+
+/**
+ * Mock visual de un slide editorial — estilo "preview" del producto en el hero.
+ * Toma la estética de los layouts de los themes preset (Editorial / Apple).
+ */
+function SlidePreview() {
+  return (
+    <div className="card-editorial overflow-hidden aspect-[16/9] relative bg-white">
+      <div className="absolute inset-0 grid grid-cols-2">
+        {/* Texto izquierda */}
+        <div className="p-10 sm:p-16 flex flex-col justify-center">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-600 mb-3 sm:mb-5">
+            Narrativa Editorial
+          </span>
+          <h2 className="font-serif text-2xl sm:text-4xl md:text-5xl tracking-tight leading-[1.05]">
+            La nueva era del{" "}
+            <span className="editorial-italic">diseño generativo</span>
+          </h2>
+          <p className="mt-3 sm:mt-5 text-xs sm:text-sm text-slate-500 italic border-l-2 border-slate-200 pl-3 sm:pl-4 hidden sm:block">
+            &ldquo;La inteligencia no reemplaza la visión, sino que expande el lienzo
+            de lo posible para el creador moderno.&rdquo;
+          </p>
+        </div>
+
+        {/* Imagen derecha (gradient + decoración SVG) */}
+        <div className="relative bg-gradient-to-br from-blue-100 via-blue-200 to-indigo-300 overflow-hidden">
+          <svg
+            className="absolute inset-0 w-full h-full opacity-50 mix-blend-overlay"
+            viewBox="0 0 400 300"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="silk" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#1e3a8a" />
+                <stop offset="50%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#dbeafe" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M0,200 Q100,50 200,150 T400,100 L400,300 L0,300 Z"
+              fill="url(#silk)"
+            />
+            <path
+              d="M0,250 Q150,100 300,200 T400,180 L400,300 L0,300 Z"
+              fill="white"
+              opacity="0.3"
+            />
+          </svg>
+          {/* Slide number en serif italic */}
+          <div className="absolute bottom-3 right-4 sm:bottom-4 sm:right-6 font-serif italic text-white/70 text-2xl sm:text-3xl">
+            01
+          </div>
+        </div>
+      </div>
+
+      {/* Footer con "framework" */}
+      <div className="absolute bottom-0 left-0 right-1/2 px-10 sm:px-16 pb-3 sm:pb-5">
+        <span className="text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
+          SlidesPro · Editorial Framework
+        </span>
+      </div>
+
+      {/* Etiqueta "preview" arriba derecha */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 brand-chip text-white bg-blue-600 hover:bg-blue-600 cursor-default pointer-events-none">
+        Preview
+      </div>
     </div>
   );
 }

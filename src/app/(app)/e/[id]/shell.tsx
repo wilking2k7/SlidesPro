@@ -8,6 +8,8 @@ import { useEditorStore, useTemporalStore } from "@/lib/editor/store";
 import { Canvas } from "@/components/editor/Canvas";
 import { SlideSidebar } from "@/components/editor/SlideSidebar";
 import { Toolbar } from "@/components/editor/Toolbar";
+import { AIAssistantPanel } from "@/components/editor/AIAssistantPanel";
+import { FloatingActionBar } from "@/components/editor/FloatingActionBar";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 
@@ -141,21 +143,21 @@ export function EditorShell({
 
   return (
     <div className="flex-1 flex flex-col">
-      <Toolbar title={title} />
-      <div className="flex-1 flex min-h-0">
-        <SlideSidebar />
-        <Canvas theme={tokens} />
-        <aside className="w-72 border-l border-neutral-200 p-4 overflow-y-auto bg-white text-sm">
-          <RightPanel />
-        </aside>
-      </div>
-      <div className="px-4 py-2 border-t border-neutral-100 flex items-center justify-end gap-2 bg-white">
+      <Toolbar title={title} extra={
         <Button asChild variant="outline" size="sm">
           <Link href={`/p/${presentationId}`}>
             <Eye className="w-4 h-4" />
-            Ver presentación
+            Ver
           </Link>
         </Button>
+      } />
+      <div className="flex-1 flex min-h-0 relative">
+        <SlideSidebar />
+        <div className="flex-1 flex flex-col relative min-w-0">
+          <Canvas theme={tokens} />
+          <FloatingActionBar />
+        </div>
+        <AIAssistantPanel />
       </div>
     </div>
   );

@@ -23,7 +23,16 @@ export function SlideSidebar() {
   const [overIdx, setOverIdx] = useState<number | null>(null);
 
   return (
-    <aside className="w-52 border-r border-neutral-200 bg-neutral-50 overflow-y-auto p-3 space-y-3 select-none">
+    <aside className="w-64 bg-white border-r border-slate-200 overflow-y-auto select-none flex flex-col shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+      <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          Diapositivas
+        </span>
+        <span className="text-[10px] font-semibold tracking-wider text-blue-600">
+          {slides.length} en total
+        </span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {slides.map((s, i) => {
         const isActive = i === activeIdx;
         const isOver = overIdx === i && dragIdx !== null && dragIdx !== i;
@@ -47,24 +56,28 @@ export function SlideSidebar() {
               setDragIdx(null);
               setOverIdx(null);
             }}
-            className={`group relative rounded-md border-2 transition-colors ${
+            className={`group relative rounded-lg border transition-all ${
               isActive
-                ? "border-blue-600 ring-2 ring-blue-600/30"
+                ? "border-blue-600 ring-4 ring-blue-600/10 shadow-sm"
                 : isOver
                   ? "border-blue-400"
-                  : "border-neutral-200 hover:border-neutral-400"
-            }`}
+                  : "border-slate-200 hover:border-slate-300"
+            } ${!isActive && i !== activeIdx ? "opacity-70 hover:opacity-100" : ""}`}
           >
             <button
               onClick={() => setActive(i)}
-              className="w-full block overflow-hidden rounded-sm cursor-pointer"
+              className="w-full block overflow-hidden rounded-md cursor-pointer"
               title={`Slide ${i + 1}`}
             >
-              {theme && <SlideRenderer slide={s.data} theme={theme} fitWidth={180} />}
+              {theme && <SlideRenderer slide={s.data} theme={theme} fitWidth={210} />}
             </button>
-            <div className="absolute left-1 top-1 text-[10px] font-mono bg-black/70 text-white px-1 rounded">
-              {i + 1}
-            </div>
+            <span
+              className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm ${
+                isActive ? "text-blue-600 bg-white" : "text-slate-400 bg-white border border-slate-100"
+              }`}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
             <div className="absolute right-1 top-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
@@ -94,10 +107,12 @@ export function SlideSidebar() {
 
       <button
         onClick={() => addSlide()}
-        className="w-full flex items-center justify-center gap-2 rounded-md border-2 border-dashed border-neutral-300 hover:border-neutral-500 hover:bg-white py-6 text-sm text-neutral-600"
+        className="w-full flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-slate-200 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50/50 py-6 text-slate-400 transition-all"
       >
-        <Plus className="w-4 h-4" /> Nuevo slide
+        <Plus className="w-5 h-5" />
+        <span className="text-xs font-semibold">Nueva diapositiva</span>
       </button>
+      </div>
     </aside>
   );
 }

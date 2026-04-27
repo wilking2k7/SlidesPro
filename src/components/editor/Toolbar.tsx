@@ -20,7 +20,7 @@ import {
  * Top toolbar: undo/redo, save status, y acciones contextuales sobre el
  * elemento seleccionado (delete, duplicate, layer order).
  */
-export function Toolbar({ title }: { title: string }) {
+export function Toolbar({ title, extra }: { title: string; extra?: React.ReactNode }) {
   const slides = useEditorStore((s) => s.slides);
   const activeIdx = useEditorStore((s) => s.activeSlideIdx);
   const selectedIds = useEditorStore((s) => s.selectedElementIds);
@@ -115,6 +115,8 @@ export function Toolbar({ title }: { title: string }) {
           <div className="w-px h-6 bg-neutral-200 mx-1" />
         </>
       )}
+
+      {extra}
     </div>
   );
 }

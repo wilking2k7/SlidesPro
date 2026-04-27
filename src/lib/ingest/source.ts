@@ -24,3 +24,30 @@ export function detectSourceKind(input: string): SourceKind {
 export function isYouTubeUrl(s: string): boolean {
   return YOUTUBE_RE.test(s.trim());
 }
+
+/**
+ * Normaliza cualquier URL de YouTube (shorts, youtu.be, embed) al formato
+ * canónico `https://www.youtube.com/watch?v=XXXXXXXXXXX`. Gemini espera ese
+ * formato en `fileData.fileUri`.
+ */
+export function canonicalYouTubeUrl(input: string): string {
+  const trimmed = input.trim();
+  const id = extractYouTubeIdLocal(trimmed);
+  if (!id) return trimmed; // si no podemos extraer id, dejamos pasar tal cual
+  return `https://www.youtube.com/watch?v=${id}`;
+}
+
+function extractYouTubeIdLocal(url: string): string | null {
+  const patterns = [
+    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    /youtube-nocookie\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}

@@ -155,16 +155,28 @@ export function PresentationViewer({
 
       {failed && (
         <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          <div className="font-medium mb-1">La generación falló.</div>
-          {jobError && <div className="font-mono text-xs mb-2">{jobError}</div>}
-          {jobError?.toLowerCase().includes("api key") && (
-            <Link
-              href="/dashboard/settings"
-              className="inline-flex items-center gap-1 text-blue-700 hover:underline font-medium"
-            >
-              → Configurar API key
-            </Link>
+          <div className="font-medium mb-2">La generación falló.</div>
+          {jobError && (
+            <div className="text-rose-800 leading-relaxed whitespace-pre-line mb-3">
+              {jobError}
+            </div>
           )}
+          <div className="flex flex-wrap gap-3 pt-2 border-t border-rose-200/60 text-xs">
+            <Link
+              href="/dashboard/new"
+              className="inline-flex items-center gap-1 text-rose-800 hover:text-rose-900 font-medium underline-offset-2 hover:underline"
+            >
+              ← Volver a intentar
+            </Link>
+            {jobError?.toLowerCase().includes("api key") && (
+              <Link
+                href="/dashboard/settings"
+                className="inline-flex items-center gap-1 text-blue-700 hover:underline font-medium"
+              >
+                → Configurar API key
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

@@ -153,8 +153,31 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       },
     });
   } catch (err) {
-    console.error("[generation]", err);
-    const message = err instanceof Error ? err.message : String(err);
+    // Logging completo en server, mensaje friendly al usuario
+    const fullMessage = err instanceof Error ? err.message : String(err);
+    console.error("[generation] failed:", {
+      jobId,
+      presentationId: payload.presentationId,
+      error: fullMessage,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+
+    // Mensaje amigable según patrón del error
+    let userMessage = fullMessage;
+    if (/invalid argument|INVALID_ARGUMENT/i.test(fullMessage)) {
+      userMessage =
+        "Gemini rechazó el request. Si usaste YouTube: prueba con un video público más corto, o pega el transcript directamente. Si usaste texto: el contenido puede tener caracteres no soportados.";
+    } else if (/api key|unauthorized|permission denied/i.test(fullMessage)) {
+      userMessage =
+        "API key inválida o sin permisos. Verifica /dashboard/settings y que tu key tenga acceso a Gemini.";
+    } else if (/quota|rate limit|429/i.test(fullMessage)) {
+      userMessage =
+        "Cuota de Gemini agotada o demasiados requests. Intenta de nuevo en unos minutos.";
+    } else if (/timeout|aborted/i.test(fullMessage)) {
+      userMessage =
+        "Tiempo de espera agotado. El video o documento puede ser demasiado largo.";
+    }
+
     await prisma.presentation
       .update({ where: { id: payload.presentationId }, data: { status: "ERROR" } })
       .catch(() => {});
@@ -162,7 +185,7 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       where: { id: jobId },
       data: {
         status: "FAILED",
-        error: message,
+        error: userMessage,
         finishedAt: new Date(),
       },
     });

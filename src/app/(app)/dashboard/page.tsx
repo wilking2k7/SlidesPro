@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -30,28 +31,32 @@ export default async function DashboardPage() {
               : `${presentations.length} presentaciones guardadas.`}
           </p>
         </div>
-        <Button disabled title="Disponible cuando termine la Fase 1">
-          + Nueva presentación
+        <Button asChild>
+          <Link href="/dashboard/new">+ Nueva presentación</Link>
         </Button>
       </div>
 
       {presentations.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-300 px-8 py-16 text-center text-sm text-neutral-500">
-          El generador estará habilitado al completar la Fase 1 del roadmap
-          (portar el motor de IA al backend).
-        </div>
+        <Link
+          href="/dashboard/new"
+          className="block rounded-lg border border-dashed border-neutral-300 px-8 py-16 text-center text-sm text-neutral-500 hover:border-neutral-500 hover:bg-neutral-50 transition-colors"
+        >
+          Crea tu primera presentación →
+        </Link>
       ) : (
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {presentations.map((p) => (
-            <li
-              key={p.id}
-              className="rounded-lg border border-neutral-200 hover:border-neutral-400 transition-colors p-4"
-            >
-              <div className="aspect-video bg-neutral-100 rounded mb-3" />
-              <div className="text-sm font-medium truncate">{p.title}</div>
-              <div className="text-xs text-neutral-500 mt-1">
-                {p.status} · {p.updatedAt.toLocaleDateString()}
-              </div>
+            <li key={p.id}>
+              <Link
+                href={`/p/${p.id}`}
+                className="block rounded-lg border border-neutral-200 hover:border-neutral-400 transition-colors p-4"
+              >
+                <div className="aspect-video bg-neutral-100 rounded mb-3" />
+                <div className="text-sm font-medium truncate">{p.title}</div>
+                <div className="text-xs text-neutral-500 mt-1">
+                  {p.status} · {p.updatedAt.toLocaleDateString()}
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

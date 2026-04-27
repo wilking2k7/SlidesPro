@@ -1,38 +1,23 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
 import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
+import { authConfig } from "./config";
 
 /**
- * Auth.js v5 — Google + GitHub OAuth + Email magic links via Resend.
+ * Config completa para la app (server actions, route handlers).
  *
  * Variables de entorno requeridas (ver .env.example):
  *   AUTH_SECRET, NEXTAUTH_URL,
  *   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
  *   GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET (opcional),
- *   RESEND_API_KEY, EMAIL_FROM (opcional, default "no-reply@slidespro.app")
+ *   RESEND_API_KEY, EMAIL_FROM (opcional)
  */
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "database" },
-  trustHost: true,
-  pages: { signIn: "/login" },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
-    ...(process.env.GITHUB_CLIENT_ID
-      ? [
-          GitHub({
-            clientId: process.env.GITHUB_CLIENT_ID,
-            clientSecret: process.env.GITHUB_CLIENT_SECRET,
-          }),
-        ]
-      : []),
+    ...authConfig.providers,
     ...(process.env.RESEND_API_KEY
       ? [
           Resend({
@@ -42,14 +27,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : []),
   ],
-  callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-      }
-      return session;
-    },
-  },
   events: {
     async createUser({ user }) {
       // Bootstrap: cada usuario nuevo recibe un workspace personal por defecto

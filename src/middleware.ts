@@ -1,26 +1,13 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth/config";
 
-const PUBLIC_PATHS = ["/", "/login", "/api/auth", "/api/health"];
-const PUBLIC_PREFIXES = ["/_next", "/favicon", "/public"];
+/**
+ * Middleware edge-safe. Usa la config sin adapter para evitar bundlear Prisma
+ * en edge runtime. La autorización está en `authConfig.callbacks.authorized`.
+ */
+export const { auth: middleware } = NextAuth(authConfig);
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-
-  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next();
-  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
-
-  if (!req.auth) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
-});
+export default middleware;
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],

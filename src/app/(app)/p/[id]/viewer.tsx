@@ -7,7 +7,7 @@ import { SlideRenderer } from "@/components/renderer/SlideRenderer";
 import type { Slide } from "@/lib/schema/slide";
 import type { ThemeTokens } from "@/lib/schema/theme";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, RefreshCw } from "lucide-react";
 
 type SlideRow = { id: string; position: number; data: Slide; notes: string };
 
@@ -36,6 +36,12 @@ export function PresentationViewer({
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(960);
+  const [regenStatus, setRegenStatus] = useState<
+    | { kind: "idle" }
+    | { kind: "regenerating" }
+    | { kind: "done"; success: number; failed: number; total: number }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
 
   // Poll job until completion + refresh slides
   useEffect(() => {
@@ -99,6 +105,39 @@ export function PresentationViewer({
   const failed = status === "ERROR" || jobStatus === "FAILED";
   const active = slides[activeIdx];
 
+  // ¿Hay imágenes IA en el deck que no se hayan generado? (src es el SVG
+  // placeholder data:URI). Si hay, mostramos botón de regenerar.
+  const hasMissingAIImages = slides.some((s) =>
+    s.data.elements.some(
+      (e) =>
+        e.type === "image" &&
+        e.aiPrompt &&
+        e.src.startsWith("data:image/svg+xml")
+    )
+  );
+
+  async function regenerateImages() {
+    setRegenStatus({ kind: "regenerating" });
+    try {
+      const res = await fetch(`/api/presentations/${id}/regenerate-images`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? `HTTP ${res.status}`);
+      }
+      setRegenStatus({
+        kind: "done",
+        success: data.success,
+        failed: data.failed,
+        total: data.total,
+      });
+      router.refresh();
+    } catch (err) {
+      setRegenStatus({ kind: "error", message: (err as Error).message });
+    }
+  }
+
   return (
     <main className="flex-1 flex flex-col">
       <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-100">
@@ -113,6 +152,22 @@ export function PresentationViewer({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {hasMissingAIImages && !generating && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={regenerateImages}
+              disabled={regenStatus.kind === "regenerating"}
+              title="Algunas imágenes IA no se generaron — reintentar"
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${regenStatus.kind === "regenerating" ? "animate-spin" : ""}`}
+              />
+              {regenStatus.kind === "regenerating"
+                ? "Regenerando…"
+                : "Regenerar imágenes"}
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/e/${id}`}>
               <Pencil className="w-3.5 h-3.5" />
@@ -150,6 +205,19 @@ export function PresentationViewer({
               style={{ width: `${progress}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {regenStatus.kind === "done" && (
+        <div className="mx-6 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          Regeneración terminada · {regenStatus.success}/{regenStatus.total} imágenes
+          {regenStatus.failed > 0 && ` (${regenStatus.failed} fallaron)`}
+        </div>
+      )}
+
+      {regenStatus.kind === "error" && (
+        <div className="mx-6 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Error regenerando imágenes: {regenStatus.message}
         </div>
       )}
 

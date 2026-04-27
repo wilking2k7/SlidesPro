@@ -162,19 +162,27 @@ function shapeAccent(opts: {
   };
 }
 
-// Placeholder image when generation hasn't run yet
+// Placeholder elegante (no dice "generating"). Se queda visible si la
+// generación de imágenes está deshabilitada o si falló — en ambos casos
+// queremos que el slide siga viéndose bien.
 const PLACEHOLDER_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'>
       <defs>
         <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
-          <stop offset='0' stop-color='#cbd5e1'/>
-          <stop offset='1' stop-color='#64748b'/>
+          <stop offset='0' stop-color='#dbeafe'/>
+          <stop offset='0.5' stop-color='#93c5fd'/>
+          <stop offset='1' stop-color='#3b82f6'/>
+        </linearGradient>
+        <linearGradient id='h' x1='0' x2='0' y1='0' y2='1'>
+          <stop offset='0' stop-color='rgba(255,255,255,0.18)'/>
+          <stop offset='1' stop-color='rgba(255,255,255,0)'/>
         </linearGradient>
       </defs>
       <rect width='1920' height='1080' fill='url(#g)'/>
-      <text x='960' y='540' text-anchor='middle' font-family='sans-serif' font-size='42' fill='rgba(255,255,255,0.6)'>generating image…</text>
+      <path d='M0,800 Q480,600 960,720 T1920,640 L1920,1080 L0,1080 Z' fill='url(#h)'/>
+      <path d='M0,900 Q640,750 1280,830 T1920,800 L1920,1080 L0,1080 Z' fill='rgba(255,255,255,0.1)'/>
     </svg>`
   );
 

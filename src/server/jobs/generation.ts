@@ -248,6 +248,8 @@ async function generateAndAttachImages(opts: {
   const conc = 3;
   let cursor = 0;
   let done = 0;
+  let success = 0;
+  let failed = 0;
 
   async function worker() {
     while (true) {
@@ -281,9 +283,14 @@ async function generateAndAttachImages(opts: {
             },
           });
           imageMap.set(t.slideIdx, upload.url);
+          success++;
+        } else {
+          // generateImage devolvió null = fallback de modelos exhausted
+          failed++;
         }
       } catch (e) {
         console.warn("[images] failed for slide", t.slideIdx, e);
+        failed++;
       } finally {
         done++;
         const progress = 50 + Math.floor((done / tasks.length) * 40);
@@ -293,6 +300,10 @@ async function generateAndAttachImages(opts: {
   }
 
   await Promise.all(Array.from({ length: Math.min(conc, tasks.length) }, () => worker()));
+
+  console.info(
+    `[images] presentation=${opts.presentationId} success=${success} failed=${failed} total=${tasks.length}`
+  );
 
   // Rebuild slides with image URLs
   return opts.designerSlides.map((content, idx) =>

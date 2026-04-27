@@ -13,6 +13,7 @@ const Body = z.object({
   slideCount: z.number().int().min(4).max(20).default(8),
   depth: z.enum(["executive", "detailed", "step-by-step"]).default("detailed"),
   themeId: z.string().min(1),
+  templateId: z.string().default("auto"),
   generateImages: z.boolean().default(true),
 });
 
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
         language: parsed.data.language,
         slideCount: parsed.data.slideCount,
         depth: parsed.data.depth,
+        templateId: parsed.data.templateId,
         generateImages: parsed.data.generateImages,
       },
     },
@@ -83,6 +85,7 @@ export async function POST(req: Request) {
         slideCount: parsed.data.slideCount,
         depth: parsed.data.depth,
         themeId: parsed.data.themeId,
+        templateId: parsed.data.templateId,
         generateImages: parsed.data.generateImages,
       },
     },

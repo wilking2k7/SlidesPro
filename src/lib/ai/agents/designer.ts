@@ -8,6 +8,7 @@ export type DesignerInput = {
   slideCount: number;
   themeMood: string;
   language: "es" | "en" | "pt";
+  templateHint?: string;
   apiKey?: string;
 };
 
@@ -20,6 +21,7 @@ export async function runDesigner(input: DesignerInput): Promise<DesignerOutput>
       slideCount: input.slideCount,
       themeMood: input.themeMood,
       language: input.language,
+      templateHint: input.templateHint,
     }),
     schema: DesignerOutput,
     temperature: 0.7,

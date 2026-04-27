@@ -38,15 +38,20 @@ export function buildDesignerPrompt(opts: {
   slideCount: number;
   themeMood: string;
   language: "es" | "en" | "pt";
+  templateHint?: string;
 }) {
   const langName =
     opts.language === "es" ? "Spanish" : opts.language === "pt" ? "Portuguese" : "English";
+
+  const templateBlock = opts.templateHint
+    ? `\nTEMPLATE GUIDANCE:\n${opts.templateHint}\nFollow this structure unless the source content clearly doesn't fit it.\n`
+    : "";
 
   return `Design a deck of approximately ${opts.slideCount} slides from this narrative brief.
 
 OUTPUT LANGUAGE for slide content: ${langName}.
 THEME MOOD: ${opts.themeMood} — let this guide your pacing and layout choices.
-
+${templateBlock}
 Narrative brief (from Analyst):
 ${opts.analystJson}
 

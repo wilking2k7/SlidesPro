@@ -7,6 +7,7 @@ import { generateImage } from "@/lib/ai/image";
 import { buildSlide } from "@/lib/ai/layout-builders";
 import { uploadBuffer, makeAssetKey } from "@/lib/storage/r2";
 import { resolveSecret } from "@/lib/secrets";
+import { getTemplate } from "@/lib/templates";
 import type { Slide } from "@/lib/schema/slide";
 import type { SlideContent } from "@/lib/ai/schemas";
 import { z } from "zod";
@@ -39,6 +40,7 @@ export const GenerateJobPayload = z.object({
   slideCount: z.number().int().min(4).max(20).default(8),
   depth: z.enum(["executive", "detailed", "step-by-step"]).default("detailed"),
   themeId: z.string(),
+  templateId: z.string().default("auto"),
   generateImages: z.boolean().default(true),
 });
 
@@ -81,13 +83,15 @@ export async function processGenerationJob(jobId: string): Promise<void> {
       apiKey: googleAiKey,
     });
 
-    // 2) Designer
+    // 2) Designer (con template hint si el usuario eligió uno)
     await updateProgress(jobId, 35, "designing");
+    const template = getTemplate(payload.templateId);
     const designer = await runDesigner({
       analyst,
       slideCount: payload.slideCount,
       themeMood,
       language: payload.language,
+      templateHint: template.designerHint || undefined,
       apiKey: googleAiKey,
     });
 
